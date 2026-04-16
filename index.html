@@ -1,0 +1,49 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>3D Chat UI</title>
+    <link rel="stylesheet" href="./style.css">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+  </head>
+  <body>
+    <!-- 3D WebGL Canvas Container -->
+    <div id="canvas-container"></div>
+
+    <!-- Info Card Overlay for Non-Chat Interactions -->
+    <div id="info-card-container" class="hidden">
+      <div class="info-card-header">
+        <h2 id="info-card-title">Services Overview</h2>
+        <button id="info-card-close-btn">&times;</button>
+      </div>
+      <div id="info-card-content" class="info-card-content">
+        <!-- Injected content -->
+      </div>
+    </div>
+
+    <!-- UI Overlay for Chat -->
+    <div id="chat-container" class="hidden">
+      <!-- Chat Box -->
+      <div class="chat-box">
+        <div class="chat-log" id="chat-log">
+          <!-- Messages will be injected here -->
+        </div>
+        <div id="loading-indicator">
+          <div class="spinner"></div>
+        </div>
+      </div>
+      
+      <!-- Input Area -->
+      <div class="chat-input-area">
+        <input type="text" id="chat-input" placeholder="Type a message..." autocomplete="off">
+        <button id="chat-send-btn">Send</button>
+      </div>
+    </div>
+
+    <!-- Main Entry Script -->
+    <script type="module" src="/main.js"></script>
+  </body>
+</html>
