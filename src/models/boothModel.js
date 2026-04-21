@@ -217,42 +217,34 @@ const MODULES = Object.freeze([
     title: 'IEC Materials',
     access: 'gated',
     badge: 'Controlled download zone',
-    summary: 'Trackable mock downloads for standard operating guides, checklists, and pig husbandry references.',
-    description:
-      'IEC assets are gated because they represent measurable knowledge-transfer outputs. The booth records what visitors collect before exposing resource-heavy training materials.',
-    highlights: [
-      'Supports biosecurity-safe distribution of reference guides without physical handling.',
-      'Provides a mock download flow that can later be connected to a document service.',
-      'Feeds the virtual logbook with measurable engagement data for future reporting.',
-    ],
-    quickStats: [
-      { label: 'Format', value: 'Mock PDFs' },
-      { label: 'Tracking', value: 'Per asset' },
-      { label: 'Access', value: 'Registered' },
-    ],
-    resources: [
+    summary: 'Official ITCPH training booklets for swine management, injection techniques, and farm husbandry.',
+    materials: [
       {
-        id: 'res-biosecurity-checklist',
-        title: 'Biosecurity Entry Checklist',
-        format: 'PDF mock',
-        description: 'Visitor flow, footbath discipline, and sanitation checkpoints for controlled farm access.',
-        status: 'Ready for tracking',
+        id: 'mat-piglet',
+        image: '/images/materials/Gabay-sa-Pag-aalaga-ng-Biik_cover.webp',
+        title: 'Gabay sa Pag-aalaga ng Biik',
+        subtitle: '(Piglet Management)',
+        description: 'A booklet designed to provide basic guidelines on drug administration in swine. It also discusses the recommended injection techniques in swine medicine, along with the steps to ensure that medications are given properly. The source of the information in this pamphlet is the Health Manual prepared by the Center\'s technical staff and the book, Pig Signals: Look, Think and Act.',
+        pdfUrl: '/materials/Gabay-sa-Pag-aalaga-ng-Biik.pdf',
       },
       {
-        id: 'res-feeding-guide',
-        title: 'Swine Feeding Guide',
-        format: 'PDF mock',
-        description: 'A structured feeding reference for growth stages, ration monitoring, and cost discipline.',
-        status: 'Ready for tracking',
+        id: 'mat-injection',
+        image: '/images/materials/Gabay-sa-Tamang-Pamamaraan-sa-Pagturok_cover.webp',
+        title: 'Gabay sa Tamang Pamamaraan sa Pagturok ng Baboy',
+        subtitle: '(Injection Techniques in Pigs)',
+        description: 'A booklet designed to provide basic guidelines on drug administration in swine. It also discusses the recommended injection techniques in swine medicine, along with the steps to ensure that medications are given properly. The source of the information in this pamphlet is the Health Manual prepared by the Center\'s technical staff and the book, Pig Signals: Look, Think and Act.',
+        pdfUrl: '/materials/Gabay-sa-Tamang-Pamamaraan-sa-Pagturok.pdf',
       },
       {
-        id: 'res-breed-selection',
-        title: 'Breed Selection Primer',
-        format: 'PDF mock',
-        description: 'Decision support notes for matching genetics with farm goals and extension training needs.',
-        status: 'Ready for tracking',
+        id: 'mat-finisher',
+        image: '/images/materials/Gabay-sa-Pag-aalaga-ng-Palakihing-Baboy_cover.webp',
+        title: 'Gabay sa Pag-aalaga ng Palakihing Baboy',
+        subtitle: '(Finisher Management)',
+        description: 'A booklet showing basic steps and principles to produce finishers efficiently. It also includes the proper transport and handling of market pigs.',
+        pdfUrl: '/materials/Gabay-sa-Pag-aalaga-ng-Palakihing-Baboy.pdf',
       },
     ],
+    resources: [],
     stories: [],
     prompts: [],
     placeholder: null,
@@ -260,41 +252,104 @@ const MODULES = Object.freeze([
   {
     id: 'corporate-materials',
     hotspotId: 'hotspot-corporate',
-    title: 'Corporate Materials & Success Stories',
+    title: 'Success Stories',
     access: 'gated',
-    badge: 'Institutional showcase',
+    badge: 'Institutional Showcase',
     summary: 'A leadership and impact area for ATI, ITCPH, and partner success narratives.',
-    description:
-      'This section translates organizational credibility into reusable digital proof points, helping the booth serve both advocacy and extension learning roles.',
-    highlights: [
-      'Presents ATI and ITCPH as a benchmark site for smart swine agriculture.',
-      'Pairs formal materials with outcomes so the booth feels evidence-driven, not promotional only.',
-      'Keeps success stories in the same content model used for future case study feeds.',
-    ],
-    quickStats: [
-      { label: 'Narratives', value: 'Case-based' },
-      { label: 'Audience', value: 'ASEAN-ready' },
-      { label: 'Use case', value: 'Advocacy + training' },
-    ],
-    resources: [
-      {
-        id: 'res-capability-profile',
-        title: 'ITCPH Capability Profile',
-        format: 'Brochure mock',
-        description: 'Core services, learning site strengths, and digital extension positioning.',
-        status: 'Ready for tracking',
-      },
-      {
-        id: 'res-training-calendar',
-        title: 'Training Calendar Snapshot',
-        format: 'One-pager mock',
-        description: 'A mock listing of short courses, extension activities, and public advisory schedules.',
-        status: 'Ready for tracking',
-      },
-    ],
+    description: '',
+    highlights: [],
+    quickStats: [],
+    resources: [],
     stories: [
-      'A farm cluster replicated visitor screening and feed discipline after using the digital booth as a remote orientation aid.',
-      'A training cohort used the digital booth to standardize pre-session materials, reducing paper logistics during on-site workshops.',
+      {
+        title: "Riza “Makamasa” Unfolding the Glamour of Community Development",
+        date: "December 9, 2025",
+        image: "/images/stories/success1.png",
+        quote: "“Noong pandemic, na-inlove ako sa cooperative kasi ang ganda-ganda, very transparent, autonomous, at tinatangkilik ang agriculture” – Riza.",
+        text: `Rizalina P. Fortes, a wife and mother of three, began her humble career in pig farming through a series of unintentional incidents. Capable of starting a pig business, Riza and his husband set out to build a 300-finisher capacity farm in Taysan, Batangas, as a possible source of additional income.
+
+Ironic as it may seem, the farm did not materialize. “Never namin nalagyan ng baboy yung building”, Riza adds. Several piglets are sometimes placed as payment for the services rendered by his Attorneyhusband. “Minsan bayad piglets from Bulacan, pero hindi nagsu-survive, nagkakandamatay", she narrates.
+
+Hopeful to turn the pig business into a successful venture, Riza, also shared a good amount of investment with a local feed supplier, even getting a spot as a member of the audit committee. From this, she took off to a higher stage. During the pandemic, she had the luxury of time to attend seminars. This was an eye-opener for Riza, and a turning point at the same time.
+
+“Doon ko nalaman na andami palang government grants for pig raisers”, she shares.
+
+Eyeing the 5-million INSPIRE Program Project, Riza sought help in Barangay Piña, Taysan, Batangas. However, farmer organizations in the area were no longer functional. “Mahirap kasi talaga doon sa amin, walang pang sustain ang farmers, sa feeds, even sa pambayad sa artificial insemination”, says Riza.
+
+“Bakit hindi na lang ikaw ang gumawa ng kooperatiba, kasi wala pa nito sa atin?”, the Barangay Chairman responds.
+
+Determined to be a recipient of the INSPIRE Program Project – a government-led initiative to rebuild the swine industry from thedevastating effects of African swine fever by supporting LGUs, cooperatives, and pig producers with biosecure facilities, modern technology, training, and capital for hog repopulation, Riza founded the Piña Taysan Agriculture Cooperative (PITAC) in 2022.
+
+While working to strengthen the cooperative’s core values and functions, she also participated in training at the ATI-ITCPH. Two years later, PITAC finally received a 10-million project (300-finisher building) under the Department of Agriculture – Regional Field Office CALABARZON.
+
+During the construction of the building, Riza was at the ITCPH attending her 5th and 6th courses, the National Trainer’s Course on Pig Husbandry, and the National Trainer’s Course on Animal Waste Management and Utilization. “Ito yung time na kino-construct yung INSPIRE sa amin, very timely kasi nababantayan ko according to standard”, Riza happily shares.
+
+Riza serves as the General Manager of PITAC. From merely 18 pig farmers, the cooperative grew to 121 members, with half as pig producers and the other half as investors. Their (personal) empty pig pens are also transformed into a functional space for PITAC members. Currently, it houses 10 sows, 40 piglets, and 150 finishers. “Yung hindi namin nagagamit dati na mga kulungan, doon naglalagay ng baboy yung ibang members ng PITAC”, Riza adds.
+
+Knowing the challenges faced by fellow pig raisers, Riza, ensures that the smallholders earn a profitable business. In partnership with a local feed supplier, GM Riza safeguards the feed capital through a loan once the hog market has concluded. “Unang goal ng PITAC is to supply feeds as pautang sa pig farmers”, she explains.
+
+Now that feeds have been secured, new challenges have cropped up, such as the market for finishers. As a solution, PITAC buys the marketable hogs. To avoid further losses, haulers were welcomed to join the cooperative as members.
+
+Pigs classified as slow growers are processed into tapa, tocino, and longganisa. Through value-adding, patronage, and refund schemes, members enjoy benefits.
+
+From zero-knowledge in pig farming, Riza embraced the beauty of swine. Knowledge gained from the training is being disseminated through a Pre-membership education seminar (PMES) for interested individuals to join the cooperative. Members also practice ethnoveterinary medicine, using locally available plants to prevent disease and some as topical ointments for open wounds.
+
+Working with the community has had a significant impact not only on Riza but also on the smallholder pig raisers in Taysan. “Pag may tulungan, lumalago ang negosyo”, she stressed.
+
+Today, Riza enjoys the company of fellow pig raisers while seeing the progress she has made in their lives.
+
+#ITCPHway #LearningByDoing`
+      },
+      {
+        title: "Beyond the Target: How Tilambo MPC Set the Gold Standard for Community-Based Swine Farming",
+        date: "November 26, 2025",
+        image: "/images/stories/success2.png",
+        quote: `"Sa kasalukuyan po mayroon na kaming 1,194 na produkto ng INSPIRE Project. May karagdagan po na 42 heads na ilalabas ngayong December. Kung susumahin po ay nasa 1,236 which is 106% na ng accomplishment ng Tilambo Multipurpose Cooperative." - Gregorio U. Culla Jr., General Manager, Tilambo Multipurpose Cooperative`,
+        text: `The Tilambo Multipurpose Cooperative (Tilambo MPC) in Taysan, Batangas, is a farmer group that offers various services to its members, including savings and deposits, lending, rental and catering services, a fuel refilling station, a water distribution system, and agricultural services. Established in 1997, the cooperative is now consists of 1798 members. In 2022, Tilambo MPC started a 300 Finisher Production, Community-based swine farm. This is part of the Department of Agriculture’s (DA) commitment to rebooting the swine industry through the National Livestock Program (NLP) and ATI-ITCPH. This 5-million-peso project includes the establishment of farm buildings, a farm office, feed storage, a biosecurity area, a waste management facility, and the provision of farm equipment.
+
+The Project aims to produce and promote good quality meat in the market, adopt modern facilities with climate-controlled systems and biosecurity, provide a venue for training, extension and learning of farmers, students, and interested individuals, support the DA and other government agencies’ swine-based livelihood programs by producing adequate and quality meat to supply these program’s needs, and provide an additional source of food and income to the farmer members.
+
+"Ang INSPIRE project po ay tumulong sa pagsu-suply ng pork meat sa merkado, dahil yun po ang isa sa mga layunin bilang isang swine multiplier farm. Iyun pong naha-howl na mga fatteners, yun po ang sinusuply sa merkado." - Gregorio U. Culla Jr.
+
+Three years after its inauguration, the Tilambo MPC produced a total of 1236 fatteners. It exceeds the 1,164 target. Given the value of animals supplied to the local market, the 106% success rate covers the full investment cost of the Department of Agriculture-National Livestock Program. Likewise, as a techno-demo farm, the project has successfully operated a modern facility with climate-controlled systems and biosecurity and provided a venue for training, extension, and learning for farmers.
+
+"Dito sa aming kooperatiba, halos lahat ng myembro ay nag-aalaga ng baboy. Marami ang naitulong ng proyektong ito. Unanguna, yung sa kinita namin, nakabahagi ang mga kasapi, nakapagpapa-iwi na din kami sa mga kasapi kapag sumosobra ang biik. Nakaka-attend kami ng mga pagsasanay, at natututunan ang tamang sistema ng pagaalaga ng baboy. Ilan lamang ito sa mga naitutulong ng proyekto sa pamamagitan ng ITCPH." - Mr. Crispin U. Berana, Chairman of the Board, Tilambo MPC
+
+Tilambo MPC still plans to strengthen its operations through the adaptation of the latest technology in pig farming, enhanced facilities, continuous capability building, and strict implementation of biosecurity practices.`
+      },
+      {
+        title: "LABS so Sweet: Promoting the Aromatic LABS Concoction",
+        date: "October 14, 2025",
+        image: "/images/stories/success3.png",
+        quote: `"Kapag mabango at matamis-tamis ang amoy ng Lactic Acid Bacteria (LAB) serum, lalo na sa natural na pagbuburo (fermentation) tulad ng sa Korean Natural Farming, ay tumutukoy sa mga senyales ng matagumpay na proseso ng paggawa at wastong pag-iimbak nito."`,
+        text: `Mr. Guillermo “Gil” Z. De Castro is one of the owners of Gil Integrated Farm and Training School, Inc., located in Rizal, Majayjay, Laguna. The farm is a DA ATI- Learning Site for Agriculture and a TESDA-accredited Farm School. In 2024, he completed the course Sustainable Pig Farming – Lactic Acid Bacteria Serum (SPF-LABS). Attending this course provided him with benefits, including a solid scientific foundation combined with practical operational skills.
+
+In his previous career, Gil served as a manager in an international bank. However, due to the COVID-19 pandemic, he decided to manage his family-owned farm and training school.
+
+"Noon, sabi ng parents ko, ang hawakan daw namin ay papel at ballpen, kasi mahirap sa agriculture, nauulanan ka, naiinitan ka… Kinailangan ko na bumalik sa agriculture kasi isa ito sa mga sustainable businesses noong pandemic… kaya ako bumalik kasi gusto ko tumulong sa community namin na mapataas ulit ang pagpo-produce ng baboy."
+
+Since his training school offers learners essential skills in Agro-Entrepreneurship, he must continually equip himself. He wanted to gain expertise in this field and sought out agencies that provide training. And so, he learned about ITCPH through its social media sites.
+
+"Nakita ko po sa Facebook ang ITCPH. Tiningnan ko po ang mga schedule ng training. Nakita ko din po ang mga success stories, nabasa ko po ang kanilang progress…nag-umpisa sila ng walang kaalaman sa pagbabuyan, at dahil po sa ITCPH nagkaroon sila ng maraming kaalaman."
+
+Through the training, Gil gained a comprehensive understanding of the microbiology of LAB serum, learning how specific strains promote gut health, strengthen the immune system, and effectively inhibit harmful pathogens. While the usual smell of properly prepared Lactic Acid Bacteria (LAB) serum is distinctly sour, acidic, or yogurt-like, he develops a more desirable sweet smell in the serum, which also indicates a successful fermentation by all the beneficial microorganisms present.
+
+"Ang “tamis" na binabanggit ay kadalasang tumutukoy sa (sweet and sour smell), at hindi sa aktwal na lasa na matamis dahil sa molasses o asukal . Ang ganitong amoy ay indikasyon ng malinis na fermentation, na nagpapahiwatig na ang mga mabubuting LAB ang nangingibabaw at walang masamang mikroorganismo (pathogens) ang dumami at sumira sa produkto. Ang hindi kanais-nais o mabahong amoy ay senyales ng pagkasira."
+
+Another impact of the SPF-LABS training is its agro-entrepreneurial benefits. This is realized by enabling pig farmers to develop premium, niche markets for antibiotic-free and naturally raised pork. This approach helps diversify their income sources and boost brand differentiation. LABS opens new business avenues through value-added and waste-to-resource models, allowing farmers, as well as young people, to sell excess LABS or high-quality organic compost made from their waste. Most importantly, its use enhances economic efficiency by significantly cutting veterinary costs and improving the Feed Conversion Ratio (FCR), transforming pig farming from a commodity business into a more profitable, sustainable, and high-value entrepreneurial venture.
+
+"...kung matututunan nila ang proseso ng concoctions, maari nila itong ibenta at siguradong kikita sila. Pwede din sila gumawa ng sarili nilang feed, ito ay ilan sa mga natutunan ko sa ITCPH. Ito po ay mabisang solusyon sa mahal na presyo ng feeds."
+
+He also emphasizes the importance of transitioning from traditional methods to innovative practices in pig farming due to the urgent need to increase profitability, enhance biosecurity, and meet stringent market demands for welfare and sustainability. Traditional farming struggles with high operating costs, particularly for feed, and is highly vulnerable to devastating disease outbreaks.
+
+"Wag tayo nasanay sa mga tradisyonal na pamamaraan, sa pagbabago ng mundo, kailangan mabilis tayo mag-adjust. Mayroon na po ng innovative pen design na itinuturo ang ITCPH. Kahit ang dumi ng baboy, pwede sya pagkakitaan."
+
+Moreover, Gil advocates the importance of continuous learning. Farmers must dedicate time to pig farming training because ongoing education is essential for running a profitable and resilient modern operation. Training provides the specialized knowledge needed to adopt innovative practices.
+
+"Huwag tayo agad-agad susuko. Hindi madali ang pagbababuyan, kailangan may passion ka. Kung mawaalan tayo ng mga babuyan o hindi tayo mag-aalaga ng baboy. Anu pong kakainin [pandagdag] ng mga mamamayan sa Pilipinas?"
+
+#ITCPHway #LearningByDoing`
+      }
     ],
     prompts: [],
     placeholder: null,
@@ -305,42 +360,34 @@ const MODULES = Object.freeze([
     title: 'Newsletters',
     access: 'gated',
     badge: 'Publication archive',
-    summary: 'Issue-based updates that keep stakeholders informed about innovations, trainings, and farm performance themes.',
-    description:
-      'Newsletter access is controlled so the booth can measure recurring stakeholder interest and understand which publication topics matter most to visitors.',
-    highlights: [
-      'Organizes recurring updates into a consistent publication shelf.',
-      'Allows future analytics on which issue themes are requested most often.',
-      'Supports asynchronous learning when live training is not available.',
+    summary: 'Browse through 23 archived editions of the ITCPH Newsletters.',
+    images: [
+      '/images/newsletters/newsletter-1.jpg',
+      '/images/newsletters/newsletter-2.webp',
+      '/images/newsletters/newsletter-3.jpg',
+      '/images/newsletters/newsletter-4.jpg',
+      '/images/newsletters/newsletter-5.jpg',
+      '/images/newsletters/newsletter-6.jpg',
+      '/images/newsletters/newsletter-7.jpg',
+      '/images/newsletters/newsletter-8.jpg',
+      '/images/newsletters/newsletter-9.jpg',
+      '/images/newsletters/newsletter-10.jpg',
+      '/images/newsletters/newsletter-11.jpg',
+      '/images/newsletters/newsletter-12.jpg',
+      '/images/newsletters/newsletter-13.jpg',
+      '/images/newsletters/newsletter-14.jpg',
+      '/images/newsletters/newsletter-15.jpg',
+      '/images/newsletters/newsletter-16.jpg',
+      '/images/newsletters/newsletter-17.jpg',
+      '/images/newsletters/newsletter-18.jpg',
+      '/images/newsletters/newsletter-19.jpg',
+      '/images/newsletters/newsletter-20.jpg',
+      '/images/newsletters/newsletter-21.jpg',
+      '/images/newsletters/newsletter-22.jpg',
+      '/images/newsletters/newsletter-23.jpg'
     ],
-    quickStats: [
-      { label: 'Cadence', value: 'Issue-based' },
-      { label: 'Purpose', value: 'Retention' },
-      { label: 'Access', value: 'Registered' },
-    ],
-    resources: [
-      {
-        id: 'res-news-jan',
-        title: 'Newsletter Issue 01',
-        format: 'PDF mock',
-        description: 'Farm biosecurity wins, extension highlights, and smart agriculture briefings.',
-        status: 'Ready for tracking',
-      },
-      {
-        id: 'res-news-feb',
-        title: 'Newsletter Issue 02',
-        format: 'PDF mock',
-        description: 'Pig husbandry training recaps and new digital support opportunities.',
-        status: 'Ready for tracking',
-      },
-      {
-        id: 'res-news-mar',
-        title: 'Newsletter Issue 03',
-        format: 'PDF mock',
-        description: 'Operational lessons from remote engagement and booth-assisted outreach.',
-        status: 'Ready for tracking',
-      },
-    ],
+    externalLink: 'https://www.atiitcph.com/newsletters',
+    resources: [],
     stories: [],
     prompts: [],
     placeholder: null,
@@ -547,7 +594,7 @@ const CALCULATOR_FIELDS = Object.freeze([
   },
   {
     id: 'pigletsPerSow',
-    label: 'Piglets per sow / cycle',
+    label: 'Piglets per sow',
     min: 0,
     max: 30,
     step: 0.5,
@@ -563,7 +610,7 @@ const CALCULATOR_FIELDS = Object.freeze([
   },
   {
     id: 'dailyFeedKg',
-    label: 'Daily feed consumption',
+    label: 'Feed consumption',
     min: 0,
     max: 500,
     step: 0.1,

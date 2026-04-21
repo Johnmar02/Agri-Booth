@@ -42,13 +42,13 @@ const handle3DClick = ({ id, object }) => {
 const handle3DBackgroundClick = () => {
   booth.closeActiveModule();
   booth.closeLogbook();
-  threeCanvasRef.value?.focusOnTarget(null);
+  // Camera no longer resets to default - user maintains focus
 };
 
 const closePanel = () => {
   booth.closeActiveModule();
   booth.closeLogbook();
-  threeCanvasRef.value?.focusOnTarget(null);
+  // Camera no longer resets to default - user maintains focus
 };
 
 const openAdminLogin = () => {

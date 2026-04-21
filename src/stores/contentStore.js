@@ -1,7 +1,7 @@
 import { defineStore } from 'pinia';
 import { getBoothModules, getOutcomeMetrics, AGRI_BOOTH_BRAND } from '@/models/boothModel';
 
-const STORAGE_KEY = 'itcph-booth-dynamic-content';
+const STORAGE_KEY = 'itcph-booth-v6-final';
 
 /**
  * STORE: contentStore

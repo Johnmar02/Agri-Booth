@@ -1,4 +1,5 @@
 <script setup>
+import { ref, watch } from 'vue';
 /**
  * VIEW: ModuleDrawerView
  * Renders the right-hand detail drawer for the currently selected hotspot module.
@@ -8,7 +9,7 @@
  * those layouts in a dedicated view allows the controller to stay focused on access,
  * validation, and state transitions rather than markup.
  */
-defineProps({
+const props = defineProps({
   module: {
     type: Object,
     default: null,
@@ -60,6 +61,25 @@ const downloadResource = (resource) => {
 const handleLaunchTour = () => {
   window.open('https://s3.ap-southeast-1.amazonaws.com/tours.exsight360.com/itcph/v5/tour.html', '_blank');
 };
+
+// Newsletter Slider
+const newsletterSlideIndex = ref(0);
+
+const nextNewsletterSlide = () => {
+  if (!props.module?.images?.length) return;
+  newsletterSlideIndex.value = (newsletterSlideIndex.value + 1) % props.module.images.length;
+};
+
+const prevNewsletterSlide = () => {
+  if (!props.module?.images?.length) return;
+  newsletterSlideIndex.value =
+    (newsletterSlideIndex.value - 1 + props.module.images.length) % props.module.images.length;
+};
+
+watch(
+  () => props.module?.id,
+  () => { newsletterSlideIndex.value = 0; }
+);
 </script>
 
 <template>
@@ -153,6 +173,114 @@ const handleLaunchTour = () => {
                     </div>
                   </div>
                 </div>
+              </div>
+            </section>
+          </template>
+          <!-- Specialized Success Stories Article Layout (Official Portal) -->
+          <template v-else-if="module.id === 'corporate-materials'">
+            <section class="body-section success-article-portal">
+              <div class="article-stack-v3">
+                <article v-for="story in module.stories" :key="story.title" class="official-article-v3">
+                  <header class="article-header-v3">
+                    <h2 class="article-title-v3">{{ story.title }}</h2>
+                    <div class="article-date-v3">📅 Published: {{ story.date }}</div>
+                  </header>
+
+                  <div class="article-visual-v3">
+                    <img :src="story.image" :alt="story.title" class="article-img-v3" />
+                  </div>
+
+                  <div class="article-content-v3">
+                    <div v-if="story.quote" class="article-pullquote-v3">
+                      “{{ story.quote }}”
+                    </div>
+                    <p class="article-body-p-v3">{{ story.text }}</p>
+                  </div>
+                  
+                  <div class="article-divider-v3"></div>
+                </article>
+
+                <!-- Footer Call to Action -->
+                <div class="article-footer-v3">
+                  <a 
+                    href="https://www.atiitcph.com/articles" 
+                    target="_blank" 
+                    class="prime-action-btn footer-redirect-btn-v3"
+                  >
+                    View More Official Stories ➔
+                  </a>
+                </div>
+              </div>
+            </section>
+          </template>
+
+          <!-- IEC Materials Booklet Layout -->
+          <template v-else-if="module.id === 'iec-materials'">
+            <section class="iec-materials-portal">
+              <div
+                v-for="mat in module.materials"
+                :key="mat.id"
+                class="iec-card"
+              >
+                <div class="iec-cover-wrap">
+                  <img
+                    :src="mat.image"
+                    :alt="mat.title"
+                    class="iec-cover-img"
+                    @error="$event.target.style.display='none'"
+                  />
+                </div>
+                <div class="iec-info">
+                  <h2 class="iec-title">{{ mat.title }}</h2>
+                  <p class="iec-subtitle">{{ mat.subtitle }}</p>
+                  <p class="iec-desc">{{ mat.description }}</p>
+                  <a
+                    :href="mat.pdfUrl"
+                    target="_blank"
+                    download
+                    class="iec-download-btn"
+                  >
+                    📥 Download booklet
+                  </a>
+                </div>
+              </div>
+            </section>
+          </template>
+
+          <template v-else-if="module.id === 'newsletters'">
+            <section class="body-section newsletter-slider-container">
+              <div class="slider-viewport-v5">
+                <button class="slider-nav-btn prev" @click="prevNewsletterSlide" aria-label="Previous">
+                  <span>❮</span>
+                </button>
+
+                <div class="active-slide-v5">
+                  <Transition name="fade-fast" mode="out-in">
+                    <img
+                      :key="newsletterSlideIndex"
+                      :src="module.images[newsletterSlideIndex]"
+                      class="newsletter-page-img"
+                      alt="Newsletter edition"
+                    />
+                  </Transition>
+                  <div class="slide-counter-v5">
+                    Edition {{ newsletterSlideIndex + 1 }} of {{ module.images.length }}
+                  </div>
+                </div>
+
+                <button class="slider-nav-btn next" @click="nextNewsletterSlide" aria-label="Next">
+                  <span>❯</span>
+                </button>
+              </div>
+
+              <div class="article-footer-v3">
+                <a
+                  href="https://www.atiitcph.com/newsletters"
+                  target="_blank"
+                  class="prime-action-btn footer-redirect-btn-v3"
+                >
+                  View More Official Newsletters ➔
+                </a>
               </div>
             </section>
           </template>
@@ -1020,8 +1148,8 @@ const handleLaunchTour = () => {
 /* 5. Calculator v2 */
 .premium-calculator-v2 {
   background: #f8fafc;
-  border-radius: 24px;
-  padding: 2.5rem;
+  border-radius: 26px;
+  padding: 3.5rem;
   border: 1px solid #e2e8f0;
 }
 
@@ -1085,6 +1213,112 @@ const handleLaunchTour = () => {
   transform: scale(0.9) translateY(20px);
 }
 
+
+
+/* 8. Success Stories Article Portal Styles */
+.success-article-portal {
+  padding: 3rem 2rem !important;
+  background: white;
+  min-height: 100%;
+}
+
+.article-stack-v3 {
+  max-width: 850px;
+  margin: 0 auto;
+  display: flex;
+  flex-direction: column;
+  gap: 4rem;
+}
+
+.official-article-v3 {
+  display: flex;
+  flex-direction: column;
+  gap: 2rem;
+}
+
+.article-header-v3 {
+  border-left: 4px solid #1a6ab4;
+  padding-left: 1.5rem;
+}
+
+.article-title-v3 {
+  font-size: 2.2rem;
+  font-weight: 800;
+  color: #1e293b;
+  line-height: 1.2;
+  margin-bottom: 0.5rem;
+}
+
+.article-date-v3 {
+  font-size: 0.85rem;
+  font-weight: 600;
+  color: #64748b;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+
+.article-visual-v3 {
+  width: 100%;
+  border-radius: 16px;
+  overflow: hidden;
+  box-shadow: 0 10px 30px rgba(0,0,0,0.1);
+  background: #f1f5f9;
+}
+
+.article-img-v3 {
+  width: 100%;
+  height: auto;
+  display: block;
+  object-fit: cover;
+}
+
+.article-content-v3 {
+  display: flex;
+  flex-direction: column;
+  gap: 1.5rem;
+}
+
+.article-pullquote-v3 {
+  font-size: 1.25rem;
+  font-weight: 700;
+  font-style: italic;
+  color: #1a6ab4;
+  padding: 1.5rem;
+  background: #f0f7ff;
+  border-radius: 12px;
+  line-height: 1.4;
+}
+
+.article-body-p-v3 {
+  font-size: 1.1rem;
+  line-height: 1.8;
+  color: #334155;
+  white-space: pre-wrap;
+}
+
+.article-divider-v3 {
+  height: 1px;
+  background: linear-gradient(90deg, transparent, #e2e8f0, transparent);
+  margin-top: 2rem;
+}
+
+.article-footer-v3 {
+  padding: 4rem 0;
+  display: flex;
+  justify-content: center;
+}
+
+.footer-redirect-btn-v3 {
+  padding: 1.25rem 3rem;
+  font-size: 1.1rem;
+  text-decoration: none;
+}
+
+@media (max-width: 1000px) {
+  .article-title-v3 { font-size: 1.75rem; }
+  .success-article-portal { padding: 1.5rem !important; }
+}
+
 @media (max-width: 1100px) {
   .premium-chat-v2 { height: 500px; max-width: 95%; }
   .chat-viewport-v2 { padding: 1rem 1.5rem; }
@@ -1098,4 +1332,204 @@ const handleLaunchTour = () => {
   .hero-title { font-size: 2.2rem; }
 }
 
+/* Newsletter Slider Styles */
+.newsletter-slider-container {
+  padding: 2rem 1.5rem !important;
+  background: #f1f5f9;
+  display: flex;
+  flex-direction: column;
+  gap: 2rem;
+  min-height: 100%;
+}
+
+.slider-viewport-v5 {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 1.25rem;
+  width: 100%;
+}
+
+.active-slide-v5 {
+  flex: 1;
+  background: white;
+  border-radius: 12px;
+  box-shadow: 0 8px 30px rgba(0,0,0,0.12);
+  padding: 1rem;
+  text-align: center;
+  overflow: hidden;
+}
+
+.newsletter-page-img {
+  width: 100%;
+  height: auto;
+  max-height: 72vh;
+  object-fit: contain;
+  display: block;
+  border-radius: 6px;
+}
+
+.slide-counter-v5 {
+  margin-top: 1rem;
+  font-size: 0.85rem;
+  font-weight: 700;
+  color: #64748b;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+}
+
+.slider-nav-btn {
+  flex-shrink: 0;
+  width: 48px;
+  height: 48px;
+  border-radius: 50%;
+  border: none;
+  background: white;
+  color: #1a6ab4;
+  font-size: 1.2rem;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+  transition: background 0.2s, color 0.2s, transform 0.15s;
+}
+
+.slider-nav-btn:hover {
+  background: #1a6ab4;
+  color: white;
+  transform: scale(1.1);
+}
+
+.slider-nav-btn:active {
+  transform: scale(0.95);
+}
+
+/* Slide transition */
+.fade-fast-enter-active,
+.fade-fast-leave-active {
+  transition: opacity 0.2s ease;
+}
+.fade-fast-enter-from,
+.fade-fast-leave-to {
+  opacity: 0;
+}
+
+@media (max-width: 768px) {
+  .slider-viewport-v5 { position: relative; }
+  .slider-nav-btn {
+    position: absolute;
+    top: 50%;
+    transform: translateY(-50%);
+    width: 38px;
+    height: 38px;
+    font-size: 1rem;
+  }
+  .slider-nav-btn.prev { left: 4px; }
+  .slider-nav-btn.next { right: 4px; }
+}
+/* IEC Materials Booklet Card Layout */
+.iec-materials-portal {
+  padding: 2rem 2rem;
+  background: #fdf8ef;
+  display: flex;
+  flex-direction: column;
+  gap: 0;
+}
+
+.iec-card {
+  display: flex;
+  align-items: flex-start;
+  gap: 2rem;
+  padding: 2rem 1.5rem;
+  border-bottom: 1px solid #e2d9c8;
+  background: #fdf8ef;
+  transition: background 0.2s;
+}
+
+.iec-card:last-child {
+  border-bottom: none;
+}
+
+.iec-card:hover {
+  background: #f5ede0;
+}
+
+.iec-cover-wrap {
+  flex-shrink: 0;
+  width: 110px;
+  height: 150px;
+  background: #e8e0d4;
+  border-radius: 6px;
+  overflow: hidden;
+  box-shadow: 0 4px 14px rgba(0,0,0,0.15);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.iec-cover-img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+}
+
+.iec-info {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.iec-title {
+  font-size: 1.15rem;
+  font-weight: 800;
+  color: #2a7a3b;
+  line-height: 1.3;
+  margin: 0;
+}
+
+.iec-subtitle {
+  font-size: 1rem;
+  font-weight: 700;
+  color: #2a7a3b;
+  margin: 0;
+  opacity: 0.85;
+}
+
+.iec-desc {
+  font-size: 0.88rem;
+  color: #4a3f32;
+  line-height: 1.65;
+  margin: 0.5rem 0 1rem;
+}
+
+.iec-download-btn {
+  display: inline-block;
+  padding: 0.55rem 1.4rem;
+  background: #1d3a1f;
+  color: white;
+  font-size: 0.85rem;
+  font-weight: 700;
+  border-radius: 6px;
+  text-decoration: none;
+  letter-spacing: 0.02em;
+  transition: background 0.2s, transform 0.15s;
+  align-self: flex-start;
+}
+
+.iec-download-btn:hover {
+  background: #2a7a3b;
+  transform: translateY(-1px);
+}
+
+.iec-download-btn:active {
+  transform: translateY(0);
+}
+
+@media (max-width: 600px) {
+  .iec-card { flex-direction: column; gap: 1rem; }
+  .iec-cover-wrap { width: 90px; height: 120px; }
+}
 </style>
