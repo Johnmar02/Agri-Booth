@@ -1,60 +1,87 @@
 <script setup>
-import { computed } from 'vue';
-import { useBoothStore } from '@/stores/booth';
-import { useBooth } from '@/composables/useBooth';
-
 /**
  * VIEW: HotspotPanel
  * DUMB UI Component that displays informational content for the active hotspot.
- * Style: Glassmorphism / Modern ITCPH Branding.
+ * Consumes props from the coordinating controller.
  */
+defineProps({
+  activeModule: {
+    type: Object,
+    default: null
+  },
+  trackedIds: {
+    type: Array,
+    required: true
+  }
+});
 
-const boothStore = useBoothStore();
-const boothController = useBooth();
+defineEmits(['close', 'track-resource']);
 
-const hotspot = computed(() => boothStore.activeHotspot);
-const isVisible = computed(() => !!hotspot.value && hotspot.value.id !== 'dot_table');
-
-const close = () => {
-  boothController.closeOverlay();
+const downloadResource = (res, emitFn) => {
+  emitFn('track-resource', res.id);
+  
+  const content = `[ITCPH Digital Agri-Booth Asset]\n\nTitle: ${res.title}\nFormat: ${res.format}\nDescription: ${res.description}\n\n*NOTE: This is a system-generated file demonstrating the real browser download workflow.*`;
+  
+  const blob = new Blob([content], { type: 'text/plain' });
+  const url = URL.createObjectURL(blob);
+  
+  const link = document.createElement('a');
+  link.href = url;
+  link.download = `ITCPH_${res.title.replace(/[\s\W]+/g, '_')}.txt`;
+  document.body.appendChild(link);
+  link.click();
+  
+  document.body.removeChild(link);
+  URL.revokeObjectURL(url);
 };
 </script>
 
 <template>
   <Transition name="slide-fade">
-    <div v-if="isVisible" class="hotspot-panel">
+    <div v-if="activeModule" class="hotspot-panel">
       <div class="panel-header">
-        <h2>{{ hotspot.title }}</h2>
-        <button class="close-btn" @click="close">&times;</button>
+        <div class="header-text">
+          <span class="badge">{{ activeModule.badge }}</span>
+          <h2>{{ activeModule.title }}</h2>
+        </div>
+        <button class="close-btn" @click="$emit('close')">&times;</button>
       </div>
       
       <div class="panel-content">
-        <p class="description">{{ hotspot.content.description }}</p>
+        <p class="description">{{ activeModule.description }}</p>
         
-        <ul v-if="hotspot.content.points" class="styled-list">
-          <li v-for="point in hotspot.content.points" :key="point">{{ point }}</li>
-        </ul>
-        
-        <div v-if="hotspot.content.metrics" class="metrics-grid">
-          <div v-for="metric in hotspot.content.metrics" :key="metric.label" class="metric-card">
+        <div v-if="activeModule.quickStats && activeModule.quickStats.length" class="metrics-grid">
+          <div v-for="metric in activeModule.quickStats" :key="metric.label" class="metric-card">
             <span class="label">{{ metric.label }}</span>
             <span class="value">{{ metric.value }}</span>
           </div>
         </div>
 
-        <ul v-if="hotspot.content.items" class="download-list">
-          <li v-for="item in hotspot.content.items" :key="item" class="download-item">
-            <span>{{ item }}</span>
-            <button class="dl-btn">Download</button>
-          </li>
-        </ul>
+        <section v-if="activeModule.resources && activeModule.resources.length" class="resource-section">
+          <h3>Downloads & Materials</h3>
+          <ul class="download-list">
+            <li v-for="res in activeModule.resources" :key="res.id" class="download-item">
+              <div class="resource-info">
+                <strong>{{ res.title }}</strong>
+                <p>{{ res.description }}</p>
+              </div>
+              <button 
+                class="dl-btn" 
+                :disabled="trackedIds.includes(res.id)"
+                @click="downloadResource(res, $emit)"
+              >
+                {{ trackedIds.includes(res.id) ? 'Collected' : 'Download' }}
+              </button>
+            </li>
+          </ul>
+        </section>
 
-        <div v-if="hotspot.content.stories" class="stories-container">
-          <div v-for="story in hotspot.content.stories" :key="story" class="story-item">
-            <h4>Outcome Success</h4>
+        <section v-if="activeModule.stories && activeModule.stories.length" class="drawer-section">
+          <h3>Impact Stories</h3>
+          <div v-for="story in activeModule.stories" :key="story" class="story-item">
             <p>{{ story }}</p>
           </div>
-        </div>
+        </section>
       </div>
     </div>
   </Transition>

@@ -72,7 +72,7 @@ export const useBoothStore = defineStore('booth', {
       },
       dot_bebu: {
         id: 'dot_bebu',
-        title: 'Bebu Game & Trivia',
+        title: 'Bebu Game',
         content: {
           description: 'Interactive pig husbandry trivia to test your knowledge.'
         }
@@ -86,11 +86,11 @@ export const useBoothStore = defineStore('booth', {
       }
     }
   }),
-  
+
   getters: {
     activeHotspot: (state) => state.hotspots[state.activeHotspotId]
   },
-  
+
   actions: {
     setActiveHotspot(id) {
       this.activeHotspotId = id;

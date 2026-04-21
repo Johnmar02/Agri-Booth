@@ -1,6 +1,5 @@
 import { useBoothStore } from '@/stores/booth';
 import { useVisitorStore } from '@/stores/visitor';
-import * as THREE from 'three';
 
 /**
  * CONTROLLER: useBooth

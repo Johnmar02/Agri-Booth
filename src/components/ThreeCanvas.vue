@@ -1,9 +1,8 @@
 <script setup>
-import { onMounted, onUnmounted, ref } from 'vue';
-import * as THREE from 'three';
-import { OrbitControls } from 'three/examples/jsm/controls/OrbitControls.js';
-import { GLTFLoader } from 'three/examples/jsm/loaders/GLTFLoader.js';
-import { useBooth } from '@/composables/useBooth';
+import { onMounted, onUnmounted, ref } from "vue";
+import * as THREE from "three";
+import { OrbitControls } from "three/examples/jsm/controls/OrbitControls.js";
+import { GLTFLoader } from "three/examples/jsm/loaders/GLTFLoader.js";
 
 /**
  * VIEW: ThreeCanvas
@@ -12,8 +11,9 @@ import { useBooth } from '@/composables/useBooth';
  * Communicates with the Booth Controller for interaction logic.
  */
 
+const emit = defineEmits(["hotspot-click", "background-click"]);
+
 const canvasContainer = ref(null);
-const boothController = useBooth();
 
 let scene, camera, renderer, controls, gltfLoader;
 let interactableObjects = [];
@@ -23,13 +23,19 @@ let targetCameraPos = new THREE.Vector3();
 let targetLookAt = new THREE.Vector3();
 let defaultCameraPos = new THREE.Vector3(0, 5, 12);
 let defaultLookAt = new THREE.Vector3(0, 3, -2);
+let hoveredHotspot = null;
 
 const initThree = () => {
   scene = new THREE.Scene();
   scene.background = new THREE.Color(0xd0d0d6);
   scene.fog = new THREE.FogExp2(0xd0d0d6, 0.015);
 
-  camera = new THREE.PerspectiveCamera(45, window.innerWidth / window.innerHeight, 0.1, 1000);
+  camera = new THREE.PerspectiveCamera(
+    45,
+    window.innerWidth / window.innerHeight,
+    0.1,
+    1000,
+  );
   camera.position.copy(defaultCameraPos);
   camera.lookAt(defaultLookAt);
 
@@ -50,15 +56,10 @@ const initThree = () => {
 
   setupLighting();
   loadBooth();
-  
-  // Register View with Controller
-  boothController.initController({
-    focusOnTarget,
-    getInteractableObjects: () => interactableObjects
-  });
 
-  window.addEventListener('resize', onWindowResize);
-  window.addEventListener('pointerdown', onPointerDown);
+  window.addEventListener("resize", onWindowResize);
+  window.addEventListener("pointermove", onPointerMove);
+  window.addEventListener("pointerdown", onPointerDown);
 };
 
 const setupLighting = () => {
@@ -77,7 +78,7 @@ const setupLighting = () => {
 
 const loadBooth = () => {
   gltfLoader = new GLTFLoader();
-  gltfLoader.load('/models/custom_booth/3DAgri-booth.glb', (gltf) => {
+  gltfLoader.load("/models/custom_booth/3DAgri-booth.glb", (gltf) => {
     const object = gltf.scene;
 
     const box = new THREE.Box3().setFromObject(object);
@@ -92,11 +93,11 @@ const loadBooth = () => {
 
     const finalBox = new THREE.Box3().setFromObject(object);
     const modelCenter = finalBox.getCenter(new THREE.Vector3());
-    
+
     defaultLookAt.copy(modelCenter);
     controls.target.copy(modelCenter);
-    
-    object.traverse(child => {
+
+    object.traverse((child) => {
       if (child.isMesh) {
         child.castShadow = true;
         child.receiveShadow = true;
@@ -114,7 +115,11 @@ const buildHotspots = (modelCenter) => {
   const cz = modelCenter.z;
 
   const texture = createHotspotTexture();
-  const material = new THREE.SpriteMaterial({ map: texture, transparent: true, blending: THREE.AdditiveBlending });
+  const material = new THREE.SpriteMaterial({
+    map: texture,
+    transparent: true,
+    blending: THREE.AdditiveBlending,
+  });
 
   const addHotspot = (id, x, y, z) => {
     const sprite = new THREE.Sprite(material.clone());
@@ -126,24 +131,25 @@ const buildHotspots = (modelCenter) => {
     hotspots.push({ mesh: sprite, baseScale: 0.5 });
   };
 
-  // Positions mapped from previous version
-  addHotspot('dot_brochure_rack', cx - 0.4, cy - 0.3, cz + 1.0);
-  addHotspot('dot_left_shelf', cx - 1.2, cy - 0.4, cz + 1.0);
-  addHotspot('dot_banner', cx + 0.3, cy - 0.3, cz - 1.2);
-  addHotspot('dot_table', cx + 0.95, cy - 0.4, cz + 0.9);
-  addHotspot('dot_right_shelf', cx + 1.4, cy - 0.2, cz + 0.9);
-  addHotspot('dot_top_sign', cx + 1.0, cy + 0.8, cz + 1.8);
-  addHotspot('dot_chairs', cx - 1.2, cy + 0.1, cz + 1.0);
+  // The 3D model hotspots mapped to the centralized boothModel 'hotspot-' IDs
+  addHotspot("hotspot-virtual-tour", cx - 0.5, cy + 0.1, cz + .9);
+  addHotspot("hotspot-iec", cx - 0.4, cy - 0.3, cz + 1.0); // was dot_brochure_rack
+  addHotspot("hotspot-newsletters", cx - 1.2, cy - 0.4, cz + 1.0); // was dot_left_shelf
+  addHotspot("hotspot-corporate", cx + 0.3, cy - 0.3, cz - 1.2); // was dot_banner
+  addHotspot("hotspot-chat", cx + 0.95, cy - 0.4, cz + 0.9); // was dot_table
+  addHotspot("hotspot-calculators", cx + 1.4, cy - 0.2, cz + 0.9); // was dot_right_shelf
+  addHotspot("hotspot-elearning", cx + 1.0, cy + 0.8, cz + 1.8); // was dot_top_sign
+  addHotspot("hotspot-bebu", cx - 1.2, cy + 0.1, cz + 1.0); // was dot_chairs
 };
 
 const createHotspotTexture = () => {
-  const canvas = document.createElement('canvas');
+  const canvas = document.createElement("canvas");
   canvas.width = 64;
   canvas.height = 64;
-  const ctx = canvas.getContext('2d');
+  const ctx = canvas.getContext("2d");
   const gradient = ctx.createRadialGradient(32, 32, 0, 32, 32, 32);
-  gradient.addColorStop(0, 'rgba(255, 255, 255, 1)');
-  gradient.addColorStop(1, 'rgba(255, 255, 255, 0)');
+  gradient.addColorStop(0, "rgba(255, 255, 255, 1)");
+  gradient.addColorStop(1, "rgba(255, 255, 255, 0)");
   ctx.fillStyle = gradient;
   ctx.fillRect(0, 0, 64, 64);
   return new THREE.CanvasTexture(canvas);
@@ -163,9 +169,25 @@ const focusOnTarget = (object) => {
 const raycaster = new THREE.Raycaster();
 const pointer = new THREE.Vector2();
 
+const onPointerMove = (event) => {
+  pointer.x = (event.clientX / window.innerWidth) * 2 - 1;
+  pointer.y = -(event.clientY / window.innerHeight) * 2 + 1;
+
+  raycaster.setFromCamera(pointer, camera);
+  const intersects = raycaster.intersectObjects(interactableObjects);
+
+  if (intersects.length > 0) {
+    document.body.style.cursor = "pointer";
+    hoveredHotspot = intersects[0].object;
+  } else {
+    document.body.style.cursor = "default";
+    hoveredHotspot = null;
+  }
+};
+
 const onPointerDown = (event) => {
   // Ignore clicks on UI
-  if (event.target.closest('#overlay-ui')) return;
+  if (event.target.closest("#overlay-ui")) return;
 
   pointer.x = (event.clientX / window.innerWidth) * 2 - 1;
   pointer.y = -(event.clientY / window.innerHeight) * 2 + 1;
@@ -175,11 +197,18 @@ const onPointerDown = (event) => {
 
   if (intersects.length > 0) {
     const clicked = intersects[0].object;
-    boothController.handleHotspotClick(clicked.userData.id, clicked);
+    // Brief "click" visual feedback
+    clicked.scale.set(0.7, 0.7, 1);
+
+    emit("hotspot-click", { id: clicked.userData.id, object: clicked });
   } else {
-    boothController.closeOverlay();
+    emit("background-click");
   }
 };
+
+defineExpose({
+  focusOnTarget,
+});
 
 const onWindowResize = () => {
   camera.aspect = window.innerWidth / window.innerHeight;
@@ -189,18 +218,24 @@ const onWindowResize = () => {
 
 const animate = () => {
   requestAnimationFrame(animate);
-  
+
   if (isLerpingToTarget) {
     camera.position.lerp(targetCameraPos, 0.05);
     controls.target.lerp(targetLookAt, 0.05);
-    if (camera.position.distanceTo(targetCameraPos) < 0.1) isLerpingToTarget = false;
+    if (camera.position.distanceTo(targetCameraPos) < 0.1)
+      isLerpingToTarget = false;
   }
 
   controls.update();
 
   const time = Date.now() * 0.003;
-  hotspots.forEach(h => {
-    const s = h.baseScale + Math.sin(time) * 0.1;
+  hotspots.forEach((h) => {
+    // If hovered, grow significantly. Otherwise, subtle pulse.
+    const isHovered = hoveredHotspot === h.mesh;
+    const hoverScale = isHovered ? 0.25 : 0;
+    const pulse = Math.sin(time) * 0.08;
+
+    const s = h.baseScale + pulse + hoverScale;
     h.mesh.scale.set(s, s, 1);
   });
 
@@ -213,8 +248,10 @@ onMounted(() => {
 });
 
 onUnmounted(() => {
-  window.removeEventListener('resize', onWindowResize);
-  window.removeEventListener('pointerdown', onPointerDown);
+  window.removeEventListener("resize", onWindowResize);
+  window.removeEventListener("pointermove", onPointerMove);
+  window.removeEventListener("pointerdown", onPointerDown);
+  document.body.style.cursor = "default";
 });
 </script>
 

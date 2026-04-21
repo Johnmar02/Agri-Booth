@@ -1,86 +1,115 @@
 <script setup>
-import { computed } from 'vue';
-import { useBoothStore } from '@/stores/booth';
-import { useBooth } from '@/composables/useBooth';
-import { useFormManager } from '@/composables/useFormManager';
-import { useVisitorStore } from '@/stores/visitor';
+import { computed, ref, watch } from 'vue';
 
 /**
  * VIEW: RegistrationPortal (Virtual Logbook)
  * Centered UI portal for collecting visitor data.
- * Adheres to the "Zero Biosecurity Risk" and "IOP Outreach" goals by digitizing site tracking.
+ * Refactored to act as a dumb component controlled by useBoothController.
  */
 
-const boothStore = useBoothStore();
-const boothController = useBooth();
-const visitorStore = useVisitorStore();
-const { formData, isSubmitting, isFormValid, submitForm } = useFormManager();
+const props = defineProps({
+  form: {
+    type: Object,
+    required: true
+  },
+  errors: {
+    type: Object,
+    default: () => ({})
+  },
+  isSubmitting: {
+    type: Boolean,
+    default: false
+  }
+});
 
-const isVisible = computed(() => boothStore.activeHotspotId === 'dot_table');
+const emit = defineEmits(['update-field', 'submit', 'close']);
+
+const showSuccess = ref(false);
+
+const isFormValid = computed(() => {
+  return props.form.name && props.form.email && props.form.address;
+});
 
 const handleRegistration = async () => {
-  await submitForm();
-  // Don't close immediately if form is invalid, but if it succeeded:
-  if (visitorStore.isRegistered) {
-    // Show success for 1 sec then close
-    setTimeout(() => {
-      boothController.closeOverlay();
-    }, 1500);
-  }
-};
-
-const close = () => {
-  boothController.closeOverlay();
+  if (!isFormValid.value) return;
+  emit('submit');
 };
 </script>
 
 <template>
   <Transition name="scale">
-    <div v-if="isVisible" class="portal-overlay">
+    <div class="portal-overlay">
       <div class="portal-card">
         <div class="header">
           <h2>Virtual Logbook</h2>
-          <button class="close-btn" @click="close">&times;</button>
+          <button class="close-btn" @click="$emit('close')">&times;</button>
         </div>
 
-        <div v-if="!visitorStore.isRegistered" class="form-container">
+        <div class="form-container">
           <p class="subtitle">Please provide your details to access special IEC materials and training resources.</p>
           
           <div class="reg-form">
             <div class="form-grid">
-              <div class="form-group">
+              <div class="form-group" :class="{ 'has-error': errors.name }">
                 <label>Full Name *</label>
-                <input v-model="formData.name" type="text" placeholder="Juan dela Cruz" />
+                <input 
+                  :value="form.name" 
+                  @input="$emit('update-field', { field: 'name', value: $event.target.value })"
+                  type="text" placeholder="Juan dela Cruz" 
+                />
+                <span v-if="errors.name" class="error-text">{{ errors.name }}</span>
               </div>
               
-              <div class="form-group">
+              <div class="form-group" :class="{ 'has-error': errors.email }">
                 <label>Email Address *</label>
-                <input v-model="formData.email" type="email" placeholder="juan@example.com" />
+                <input 
+                  :value="form.email" 
+                  @input="$emit('update-field', { field: 'email', value: $event.target.value })"
+                  type="email" placeholder="juan@example.com" 
+                />
+                <span v-if="errors.email" class="error-text">{{ errors.email }}</span>
               </div>
 
-              <div class="form-group full-width">
+              <div class="form-group full-width" :class="{ 'has-error': errors.address }">
                 <label>Address *</label>
-                <input v-model="formData.address" type="text" placeholder="City, Province" />
+                <input 
+                  :value="form.address" 
+                  @input="$emit('update-field', { field: 'address', value: $event.target.value })"
+                  type="text" placeholder="City, Province" 
+                />
+                <span v-if="errors.address" class="error-text">{{ errors.address }}</span>
               </div>
 
-              <div class="form-group">
+              <div class="form-group" :class="{ 'has-error': errors.affiliations }">
                 <label>Affiliations</label>
-                <input v-model="formData.affiliations" type="text" placeholder="Organization / Agency" />
+                <input 
+                  :value="form.affiliations" 
+                  @input="$emit('update-field', { field: 'affiliations', value: $event.target.value })"
+                  type="text" placeholder="Organization / Agency" 
+                />
+                <span v-if="errors.affiliations" class="error-text">{{ errors.affiliations }}</span>
               </div>
 
-              <div class="form-group">
+              <div class="form-group" :class="{ 'has-error': errors.gender }">
                 <label>Gender</label>
-                <select v-model="formData.gender">
+                <select 
+                  :value="form.gender"
+                  @change="$emit('update-field', { field: 'gender', value: $event.target.value })"
+                >
                   <option value="">Select...</option>
                   <option>Male</option>
                   <option>Female</option>
                   <option>Non-binary</option>
                 </select>
+                <span v-if="errors.gender" class="error-text">{{ errors.gender }}</span>
               </div>
 
-              <div class="form-group full-width">
+              <div class="form-group full-width" :class="{ 'has-error': errors.clientType }">
                 <label>Type of Client</label>
-                <select v-model="formData.clientType">
+                <select 
+                  :value="form.clientType"
+                  @change="$emit('update-field', { field: 'clientType', value: $event.target.value })"
+                >
                   <option value="">Select client type...</option>
                   <option>Farmer</option>
                   <option>Student</option>
@@ -88,28 +117,30 @@ const close = () => {
                   <option>Extension Worker</option>
                   <option>Other</option>
                 </select>
+                <span v-if="errors.clientType" class="error-text">{{ errors.clientType }}</span>
               </div>
 
-              <div class="form-group full-width">
+              <div class="form-group full-width" :class="{ 'has-error': errors.feedback }">
                 <label>Feedback / Concerns</label>
-                <textarea v-model="formData.feedback" rows="3" placeholder="How can ITCPH better serve you?"></textarea>
+                <textarea 
+                  :value="form.feedback" 
+                  @input="$emit('update-field', { field: 'feedback', value: $event.target.value })"
+                  rows="3" placeholder="How can ITCPH better serve you?"></textarea>
+                <span v-if="errors.feedback" class="error-text">{{ errors.feedback }}</span>
               </div>
             </div>
 
-            <button 
-              class="submit-btn" 
-              :disabled="!isFormValid || isSubmitting"
-              @click="handleRegistration"
-            >
-              {{ isSubmitting ? 'Recording Entry...' : 'Submit to ITCPH' }}
-            </button>
+            <div class="form-actions">
+              <span v-if="errors.form" class="main-error">{{ errors.form }}</span>
+              <button 
+                class="submit-btn" 
+                :disabled="!isFormValid || isSubmitting"
+                @click="handleRegistration"
+              >
+                {{ isSubmitting ? 'Recording Entry...' : 'Submit to ITCPH' }}
+              </button>
+            </div>
           </div>
-        </div>
-
-        <div v-else class="success-container">
-          <div class="success-icon">✓</div>
-          <h3>Registration Complete</h3>
-          <p>Welcome, {{ visitorStore.registration.name }}. You can now access all booth modules.</p>
         </div>
       </div>
     </div>
@@ -218,6 +249,27 @@ input:focus, select:focus, textarea:focus {
   outline: none;
   border-color: #1a6ab4;
   background: #f8fafc;
+}
+
+.has-error input, .has-error select, .has-error textarea {
+  border-color: #ef4444 !important;
+}
+
+.error-text {
+  font-size: 0.75rem;
+  color: #ef4444;
+  margin-top: 2px;
+}
+
+.main-error {
+  display: block;
+  font-size: 0.85rem;
+  color: #ef4444;
+  background: rgba(239, 68, 68, 0.1);
+  padding: 8px 12px;
+  border-radius: 6px;
+  margin-bottom: 12px;
+  text-align: center;
 }
 
 .submit-btn {
