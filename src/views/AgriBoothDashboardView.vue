@@ -131,7 +131,7 @@ defineEmits(['hotspot-select', 'module-select', 'open-logbook']);
           <h3>{{ module.title }}</h3>
           <p class="module-card__summary">{{ module.summary }}</p>
 
-          <ul class="module-card__highlights">
+          <ul v-if="module.highlights?.length" class="module-card__highlights">
             <li v-for="highlight in module.highlights.slice(0, 2)" :key="highlight">
               {{ highlight }}
             </li>

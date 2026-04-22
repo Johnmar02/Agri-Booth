@@ -80,6 +80,13 @@ watch(
   () => props.module?.id,
   () => { newsletterSlideIndex.value = 0; }
 );
+
+const publicationCoverStyle = (publication) => ({
+  '--publication-accent': publication.accent || '#1a6ab4',
+});
+
+const getProgramRegistrationUrl = (program) =>
+  program.registrationUrl || props.module?.registrations?.[0]?.url || props.module?.scheduleLink || '#';
 </script>
 
 <template>
@@ -244,6 +251,203 @@ watch(
                   </a>
                 </div>
               </div>
+            </section>
+          </template>
+
+          <template v-else-if="module.id === 'corp-materials'">
+            <section class="body-section corp-materials-portal">
+              <div class="corp-materials-header">
+                <div class="corp-materials-copy">
+                  <h2 class="section-label">Publication Shelf</h2>
+                  <p class="corp-materials-text">{{ module.description }}</p>
+                </div>
+                <a
+                  v-if="module.externalLink"
+                  :href="module.externalLink"
+                  target="_blank"
+                  rel="noreferrer"
+                  class="corp-materials-hub-link"
+                >
+                  Open materials hub
+                </a>
+              </div>
+
+              <div
+                v-for="publication in module.publications"
+                :key="publication.id"
+                class="publication-card"
+              >
+                <div class="publication-cover" :style="publicationCoverStyle(publication)">
+                  <img
+                    v-if="publication.image"
+                    :src="publication.image"
+                    :alt="publication.title"
+                    class="publication-cover-img"
+                    @error="$event.target.style.display='none'"
+                  />
+                  <div v-else class="publication-cover-fallback">
+                    <span class="publication-cover-kicker">{{ publication.subtitle }}</span>
+                    <strong class="publication-cover-label">
+                      {{ publication.coverLabel || publication.title }}
+                    </strong>
+                  </div>
+                </div>
+
+                <div class="publication-info">
+                  <p class="publication-type">{{ publication.subtitle }}</p>
+                  <h2 class="publication-title">{{ publication.title }}</h2>
+                  <p class="publication-desc">{{ publication.description }}</p>
+                  <a
+                    :href="publication.href || module.externalLink"
+                    target="_blank"
+                    rel="noreferrer"
+                    class="publication-action"
+                  >
+                    {{ publication.actionLabel || 'View publication' }}
+                  </a>
+                </div>
+              </div>
+            </section>
+          </template>
+
+          <template v-else-if="module.id === 'training-programs'">
+            <section class="body-section training-programs-portal">
+              <div class="training-programs-hero">
+                <div class="training-programs-copy">
+                  <span class="section-label">Course Catalog</span>
+                  <h2 class="training-programs-title">{{ module.headline }}</h2>
+                  <p class="training-programs-text">{{ module.description }}</p>
+                  <p class="training-programs-contact">
+                    Contact numbers: {{ module.contactNumbers }}
+                  </p>
+                </div>
+
+                <div class="training-programs-actions">
+                  <a
+                    v-if="module.scheduleLink"
+                    :href="module.scheduleLink"
+                    target="_blank"
+                    rel="noreferrer"
+                    class="training-programs-primary-link"
+                  >
+                    View training calendar
+                  </a>
+                  <a
+                    v-for="registration in module.registrations"
+                    :key="registration.label"
+                    :href="registration.url"
+                    target="_blank"
+                    rel="noreferrer"
+                    class="training-programs-secondary-link"
+                  >
+                    {{ registration.label }}
+                  </a>
+                </div>
+              </div>
+
+              <div class="training-card-grid">
+                <article
+                  v-for="program in module.programs"
+                  :key="program.id"
+                  class="training-card"
+                >
+                  <div class="training-card-topline">
+                    <span class="training-track">{{ program.category }}</span>
+                    <span class="training-duration">{{ program.duration }}</span>
+                  </div>
+                  <h3 class="training-card-title">{{ program.title }}</h3>
+                  <p class="training-card-desc">{{ program.description }}</p>
+
+                  <dl class="training-meta">
+                    <div class="training-meta-item">
+                      <dt>Target audience</dt>
+                      <dd>{{ program.audience }}</dd>
+                    </div>
+                    <div class="training-meta-item">
+                      <dt>Registration</dt>
+                      <dd>{{ program.registrationNote }}</dd>
+                    </div>
+                  </dl>
+
+                  <div class="training-card-actions">
+                    <a
+                      :href="getProgramRegistrationUrl(program)"
+                      target="_blank"
+                      rel="noreferrer"
+                      class="training-card-link"
+                    >
+                      {{ program.actionLabel || 'Register or inquire' }}
+                    </a>
+                    <a
+                      v-if="module.scheduleLink"
+                      :href="module.scheduleLink"
+                      target="_blank"
+                      rel="noreferrer"
+                      class="training-card-link training-card-link--ghost"
+                    >
+                      View schedule
+                    </a>
+                  </div>
+                </article>
+              </div>
+            </section>
+          </template>
+
+          <template v-else-if="module.id === 'digital-calculators'">
+            <section class="body-section calculator-hub-portal">
+              <div class="calculator-hub-intro">
+                <h2 class="section-label">Calculator Directory</h2>
+                <p class="calculator-hub-text">{{ module.description }}</p>
+              </div>
+
+              <article
+                v-for="calculator in module.calculators || []"
+                :key="calculator.id"
+                class="calculator-link-card"
+              >
+                <div class="calculator-link-topline">
+                  <div>
+                    <h3 class="calculator-link-title">{{ calculator.heading }}</h3>
+                    <p class="calculator-link-subtitle">{{ calculator.buttonLabel }}</p>
+                  </div>
+                  <a :href="calculator.url" class="calculator-link-button">
+                    {{ calculator.buttonLabel }}
+                  </a>
+                </div>
+
+                <div class="calculator-link-body">
+                  <section class="calculator-copy-block">
+                    <h4 class="calculator-copy-heading">{{ calculator.infoTitle }}</h4>
+                    <p class="calculator-copy-text">{{ calculator.info }}</p>
+                  </section>
+
+                  <section v-if="calculator.faqs?.length" class="calculator-copy-block">
+                    <h4 class="calculator-copy-heading">{{ calculator.faqTitle }}</h4>
+                    <dl class="calculator-faq-list">
+                      <div
+                        v-for="faq in calculator.faqs"
+                        :key="faq.question"
+                        class="calculator-faq-item"
+                      >
+                        <dt>{{ faq.question }}</dt>
+                        <dd>{{ faq.answer }}</dd>
+                      </div>
+                    </dl>
+                  </section>
+
+                  <section class="calculator-copy-block">
+                    <h4 class="calculator-copy-heading">{{ calculator.instructionsTitle }}</h4>
+                    <ol class="calculator-steps">
+                      <li
+                        v-for="instruction in calculator.instructions"
+                        :key="instruction"
+                      >
+                        {{ instruction }}
+                      </li>
+                    </ol>
+                  </section>
+                </div>
+              </article>
             </section>
           </template>
 
@@ -1204,6 +1408,133 @@ watch(
 .sum-val-v2 { font-size: 1.4rem; font-weight: 800; color: #d17c24; }
 .save-calc-btn { width: auto; max-width: fit-content; padding-left: 2rem; padding-right: 2rem; }
 
+/* Calculator Directory */
+.calculator-hub-portal {
+  padding: 2rem !important;
+  background: #f8fafc;
+  display: flex;
+  flex-direction: column;
+  gap: 1.25rem;
+}
+
+.calculator-hub-intro {
+  padding: 0.25rem 0.25rem 0;
+}
+
+.calculator-hub-text {
+  margin: 0.7rem 0 0;
+  color: #475569;
+  line-height: 1.7;
+  max-width: 48rem;
+}
+
+.calculator-link-card {
+  display: flex;
+  flex-direction: column;
+  gap: 1.25rem;
+  padding: 1.5rem;
+  border-radius: 24px;
+  background: white;
+  border: 1px solid #dbe5f0;
+  box-shadow: 0 16px 36px rgba(15, 23, 42, 0.05);
+}
+
+.calculator-link-topline {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 1rem;
+}
+
+.calculator-link-title {
+  margin: 0;
+  color: #0f172a;
+  font-size: 1.3rem;
+  line-height: 1.3;
+}
+
+.calculator-link-subtitle {
+  margin: 0.35rem 0 0;
+  color: #1a6ab4;
+  font-size: 0.82rem;
+  font-weight: 800;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.calculator-link-button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0.95rem 1.25rem;
+  border-radius: 14px;
+  background: #1a6ab4;
+  color: white;
+  font-weight: 800;
+  text-decoration: none;
+  white-space: nowrap;
+}
+
+.calculator-link-body {
+  display: grid;
+  gap: 1rem;
+}
+
+.calculator-copy-block {
+  display: grid;
+  gap: 0.6rem;
+  padding: 1rem 1.1rem;
+  border-radius: 18px;
+  background: #f8fafc;
+  border: 1px solid #e2e8f0;
+}
+
+.calculator-copy-heading {
+  margin: 0;
+  color: #0f172a;
+  font-size: 0.95rem;
+  font-weight: 800;
+}
+
+.calculator-copy-text {
+  margin: 0;
+  color: #475569;
+  line-height: 1.75;
+}
+
+.calculator-faq-list {
+  display: grid;
+  gap: 0.85rem;
+  margin: 0;
+}
+
+.calculator-faq-item {
+  display: grid;
+  gap: 0.25rem;
+}
+
+.calculator-faq-item dt {
+  color: #1e293b;
+  font-weight: 800;
+}
+
+.calculator-faq-item dd {
+  margin: 0;
+  color: #475569;
+  line-height: 1.7;
+}
+
+.calculator-steps {
+  margin: 0;
+  padding-left: 1.2rem;
+  color: #475569;
+  line-height: 1.8;
+}
+
+.calculator-steps li + li {
+  margin-top: 0.45rem;
+}
+
 /* Transitions */
 .premium-modal-enter-active, .premium-modal-leave-active {
   transition: all 0.5s cubic-bezier(0.16, 1, 0.3, 1);
@@ -1428,6 +1759,338 @@ watch(
   .slider-nav-btn.prev { left: 4px; }
   .slider-nav-btn.next { right: 4px; }
 }
+
+/* Corporate Materials Drawer */
+.corp-materials-portal {
+  padding: 2rem !important;
+  background: #f8fafc;
+  display: flex;
+  flex-direction: column;
+  gap: 1.25rem;
+}
+
+.corp-materials-header {
+  display: flex;
+  justify-content: space-between;
+  gap: 1.5rem;
+  align-items: flex-start;
+  padding: 0 0.25rem;
+}
+
+.corp-materials-copy {
+  max-width: 42rem;
+}
+
+.corp-materials-text {
+  margin: 0.65rem 0 0;
+  color: #475569;
+  line-height: 1.7;
+}
+
+.corp-materials-hub-link {
+  flex-shrink: 0;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0.9rem 1.25rem;
+  border-radius: 14px;
+  background: #1a6ab4;
+  color: white;
+  font-weight: 800;
+  text-decoration: none;
+  box-shadow: 0 14px 28px rgba(26, 106, 180, 0.2);
+}
+
+.publication-card {
+  display: flex;
+  gap: 1.5rem;
+  padding: 1.5rem;
+  border-radius: 24px;
+  background: white;
+  border: 1px solid #e2e8f0;
+  box-shadow: 0 18px 40px rgba(15, 23, 42, 0.06);
+}
+
+.publication-cover {
+  flex-shrink: 0;
+  width: 140px;
+  min-height: 188px;
+  border-radius: 18px;
+  overflow: hidden;
+  background: linear-gradient(165deg, var(--publication-accent), #0f172a);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.3);
+}
+
+.publication-cover-img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+}
+
+.publication-cover-fallback {
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+  justify-content: flex-end;
+  gap: 0.55rem;
+  padding: 1rem;
+  color: white;
+  background:
+    radial-gradient(circle at top left, rgba(255, 255, 255, 0.22), transparent 44%),
+    linear-gradient(180deg, rgba(255, 255, 255, 0.04), rgba(0, 0, 0, 0.22));
+}
+
+.publication-cover-kicker {
+  font-size: 0.72rem;
+  font-weight: 800;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  opacity: 0.84;
+}
+
+.publication-cover-label {
+  font-size: 1.15rem;
+  line-height: 1.2;
+}
+
+.publication-info {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+}
+
+.publication-type {
+  margin: 0;
+  color: #1a6ab4;
+  font-size: 0.78rem;
+  font-weight: 800;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.publication-title {
+  margin: 0.35rem 0 0;
+  color: #0f172a;
+  font-size: 1.35rem;
+  line-height: 1.3;
+}
+
+.publication-desc {
+  margin: 0.85rem 0 1.25rem;
+  color: #475569;
+  line-height: 1.7;
+}
+
+.publication-action {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0.85rem 1.25rem;
+  border-radius: 12px;
+  background: #0f172a;
+  color: white;
+  font-weight: 800;
+  text-decoration: none;
+}
+
+/* Training Programs Drawer */
+.training-programs-portal {
+  padding: 2rem !important;
+  background:
+    radial-gradient(circle at top right, rgba(26, 106, 180, 0.08), transparent 30%),
+    #f8fafc;
+  display: flex;
+  flex-direction: column;
+  gap: 1.5rem;
+}
+
+.training-programs-hero {
+  display: grid;
+  grid-template-columns: minmax(0, 1.6fr) minmax(250px, 0.9fr);
+  gap: 1.5rem;
+  padding: 1.75rem;
+  border-radius: 28px;
+  background: white;
+  border: 1px solid #dbe5f0;
+  box-shadow: 0 18px 42px rgba(15, 23, 42, 0.06);
+}
+
+.training-programs-title {
+  margin: 0.55rem 0 0;
+  color: #0f172a;
+  font-size: clamp(1.7rem, 2vw, 2.2rem);
+  line-height: 1.2;
+}
+
+.training-programs-text {
+  margin: 0.85rem 0 0;
+  color: #475569;
+  line-height: 1.75;
+}
+
+.training-programs-contact {
+  margin: 1rem 0 0;
+  color: #1e293b;
+  font-weight: 700;
+}
+
+.training-programs-actions {
+  display: flex;
+  flex-direction: column;
+  gap: 0.8rem;
+}
+
+.training-programs-primary-link,
+.training-programs-secondary-link,
+.training-card-link {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0.9rem 1.1rem;
+  border-radius: 12px;
+  text-decoration: none;
+  font-weight: 800;
+}
+
+.training-programs-primary-link,
+.training-card-link {
+  background: #1a6ab4;
+  color: white;
+}
+
+.training-programs-secondary-link {
+  background: #eef4fb;
+  color: #1a6ab4;
+  border: 1px solid #cfe0f3;
+}
+
+.training-card-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+  gap: 1.25rem;
+}
+
+.training-card {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+  padding: 1.5rem;
+  border-radius: 24px;
+  background: white;
+  border: 1px solid #dbe5f0;
+  box-shadow: 0 16px 36px rgba(15, 23, 42, 0.05);
+}
+
+.training-card-topline {
+  display: flex;
+  justify-content: space-between;
+  gap: 0.75rem;
+  align-items: center;
+  flex-wrap: wrap;
+}
+
+.training-track,
+.training-duration {
+  display: inline-flex;
+  align-items: center;
+  border-radius: 999px;
+  padding: 0.35rem 0.75rem;
+  font-size: 0.72rem;
+  font-weight: 800;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.training-track {
+  background: #edf7f1;
+  color: #1f6a45;
+}
+
+.training-duration {
+  background: #f4efe2;
+  color: #8b5e1f;
+}
+
+.training-card-title {
+  margin: 0;
+  color: #0f172a;
+  font-size: 1.2rem;
+  line-height: 1.35;
+}
+
+.training-card-desc {
+  margin: 0;
+  color: #475569;
+  line-height: 1.7;
+}
+
+.training-meta {
+  display: grid;
+  gap: 0.85rem;
+  margin: 0;
+}
+
+.training-meta-item {
+  display: grid;
+  gap: 0.25rem;
+  padding: 0.9rem 1rem;
+  border-radius: 16px;
+  background: #f8fafc;
+  border: 1px solid #e2e8f0;
+}
+
+.training-meta-item dt {
+  font-size: 0.75rem;
+  font-weight: 800;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: #64748b;
+}
+
+.training-meta-item dd {
+  margin: 0;
+  color: #1e293b;
+  line-height: 1.55;
+}
+
+.training-card-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.75rem;
+  margin-top: auto;
+}
+
+.training-card-link--ghost {
+  background: white;
+  color: #1a6ab4;
+  border: 1px solid #cfe0f3;
+}
+
+@media (max-width: 900px) {
+  .corp-materials-header,
+  .training-programs-hero {
+    grid-template-columns: 1fr;
+    display: grid;
+  }
+
+  .calculator-link-topline {
+    flex-direction: column;
+  }
+}
+
+@media (max-width: 700px) {
+  .publication-card {
+    flex-direction: column;
+  }
+
+  .publication-cover {
+    width: 100%;
+    min-height: 160px;
+  }
+}
+
 /* IEC Materials Booklet Card Layout */
 .iec-materials-portal {
   padding: 2rem 2rem;

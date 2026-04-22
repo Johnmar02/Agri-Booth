@@ -23,9 +23,10 @@ const isAddingResource = ref(false);
 const resourceDraft = reactive({
   title: '',
   description: '',
-  format: 'PDF',
+  format: 'PDF Document',
   status: 'Ready',
-  file: null
+  file: null,
+  imageFile: null
 });
 const uploadProgress = ref(0);
 let autoLogoutTimer = null;
@@ -133,6 +134,9 @@ export function useAdminController() {
   const startAddResource = () => {
     resourceDraft.title = '';
     resourceDraft.description = '';
+    resourceDraft.format = 'PDF Document';
+    resourceDraft.file = null;
+    resourceDraft.imageFile = null;
     isAddingResource.value = true;
   };
 

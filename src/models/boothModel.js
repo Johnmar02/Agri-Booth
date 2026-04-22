@@ -121,8 +121,8 @@ const HOTSPOTS = Object.freeze([
   {
     id: 'hotspot-corporate',
     moduleId: 'corporate-materials',
-    label: 'Corporate Materials',
-    shortLabel: 'CM',
+    label: 'Success Stories',
+    shortLabel: 'SS',
     x: 18,
     y: 56,
     zone: 'Center backdrop',
@@ -171,6 +171,24 @@ const HOTSPOTS = Object.freeze([
     x: 24,
     y: 76,
     zone: 'Decision tools',
+  },
+  {
+    id: 'hotspot-training',
+    moduleId: 'training-programs',
+    label: 'Training Programs',
+    shortLabel: 'TP',
+    x: 38,
+    y: 72,
+    zone: 'Training registration',
+  },
+  {
+    id: 'hotspot-corp-materials',
+    moduleId: 'corp-materials',
+    label: 'Corporate Materials',
+    shortLabel: 'CM',
+    x: 20,
+    y: 64,
+    zone: 'Corporate publications',
   },
 ]);
 
@@ -488,20 +506,221 @@ Moreover, Gil advocates the importance of continuous learning. Farmers must dedi
     hotspotId: 'hotspot-calculators',
     title: 'Digital Calculators',
     access: 'public',
-    badge: 'Decision support',
-    summary: 'Simple farm calculators that preview how the booth can support cost and planning decisions.',
+    badge: 'Calculator Hub',
+    summary: 'Open ITCPH calculators for pig pen planning, pig feeding, and biogas digester sizing.',
     description:
-      'These calculators stay public because they are a strong demonstration of practical value. They also prove how the booth can bridge education with operational decision support.',
+      'Choose one of the official ITCPH calculators below to open the tool and review the basic instructions before using it.',
+    highlights: [],
+    quickStats: [],
+    calculators: [
+      {
+        id: 'pig-pen-calculator',
+        buttonLabel: 'Pig Pen Calculator',
+        heading: 'TCPH Pig Pen Calculator',
+        url: 'https://www.atiitcph.com/materials/pig-pen-calculator',
+        infoTitle: 'About the calculator',
+        info:
+          'A certain number of pens should be available as to the number of swine in the farm. For each stage of production or reproduction, different types of pens are needed. There is also a certain ratio between the different types of pen. If no attention is paid, some parts of the farm will be either overcrowded or under occupied.',
+        faqTitle: 'Frequently Asked Questions',
+        faqs: [
+          {
+            question: 'What standard is this Pig Pen Calculator based?',
+            answer:
+              'This Pig Pen Calculator is based on ITCPH teachings, and the one that we use on our training farm.',
+          },
+          {
+            question: 'Why is it important to have standard number of pens?',
+            answer: 'To maximize the area and to avoid overcrowding.',
+          },
+        ],
+        instructionsTitle: 'Paano ba gamitin ang Pig Pen Calculator?',
+        instructions: [
+          'Pumili kung anong Pig Pen type ang gusto mong i-compute.',
+          'I-input ang mga hinihinging data. I-click ang i upang malaman ang iba pang mahahalagang impormasyon.',
+          'Lalabas lamang ang calculated pig pens kapag nai-input na lahat ng kailangang data.',
+          'Walang impormasyon na kinukuha ang ITCPH mula sa mga datos para maprotektahan ang privacy ng lahat.',
+        ],
+      },
+      {
+        id: 'pig-feeding-calculator',
+        buttonLabel: 'Pig Feeding Calculator',
+        heading: 'ITCPH Pig Feeding Calculator',
+        url: 'https://www.atiitcph.com/materials/pig-feeding-calculator',
+        infoTitle: 'About the calculator',
+        info:
+          'When it comes to swine production, one of the most important parts is knowing the proper way to feed pigs. Their growth rates can be better maintained when they are given proper pig feed appropriate to their life stage. In order to maintain a healthy stock, maximize growth and reproduction, and increase production, it is imperative to feed them the right food and a balanced diet from wean to finish. The ITCPH Training Farm has been using these feeding schemes for a long time. However, it is still best to follow your feed company\'s recommendations.',
+        instructionsTitle: 'How to use this calculator?',
+        instructions: [
+          'Choose the type of pig.',
+          'Select the Age, Weight, ADG, Stage of Pregnancy and Stage of Lactation depending on the type of pig that you chose.',
+        ],
+      },
+      {
+        id: 'biogas-digester-calculator',
+        buttonLabel: 'Biogas Digester Calculator',
+        heading: 'ITCPH Biogas Digester Calculator',
+        url: 'https://www.atiitcph.com/materials/biogas-digester-calculator',
+        infoTitle: 'About the calculator',
+        info:
+          'Animal manure can be a source of alternative energy for our pig farmers. A biogas digester can convert manure into energy in the form of biogas which contains methane. This alternative energy can be used for cooking and driving electric generators. Two options can be considered in determining the size of a biogas digester but we will be focusing to one of the option in this calculator. The option 1 which is by considering the volume of manure production per day, employ the recommended manure-water ratio, and the design retention period to calculate the total manure production in the farms, slurry volume, digester volume and estimate biogas production.',
+        instructionsTitle: 'How to use this calculator?',
+        instructions: [
+          'Input how many heads of pigs per classification. To get the Manure production per day',
+          'Input the ratio of manure to water (Usually the ratio is manure: water; 1:1, 1:2, 1:3). To get the Slurry Volume',
+          'Input the retention period (Usually its 30 - 45 days). To get the Digester Volume',
+          'Input the percentage the used digester volume (25% - 75%). To get the estimated gas production',
+        ],
+      },
+    ],
+    resources: [],
+    stories: [],
+    prompts: [],
+    placeholder: null,
+  },
+  {
+    id: 'training-programs',
+    hotspotId: 'hotspot-training',
+    title: 'Training Programs',
+    access: 'public',
+    badge: 'ITCPH Trainings',
+    summary: 'Browse ITCPH formal course offerings, published schedules, and direct registration channels.',
+    description:
+      'This catalog introduces flagship ITCPH training programs and keeps the current schedule and registration handoff visible inside the booth experience.',
     highlights: [
-      'Focused on lightweight calculations that run fully in the browser.',
-      'Avoids network calls so farm users can still work offline or on poor signal.',
-      'Acts as a foundation for future ROI and feed analytics modules.',
+      'Groups trainer development, husbandry, and waste-management learning tracks in one catalog.',
+      'Keeps calendar and registration links available without leaving visitors guessing where to go next.',
+      'Uses a lightweight structure that can be expanded later with live schedules or richer course metadata.',
     ],
     quickStats: [
-      { label: 'Mode', value: 'Browser-only' },
-      { label: 'Latency', value: 'Instant' },
-      { label: 'Use case', value: 'Planning aid' },
+      { label: 'Catalog mode', value: 'Course directory' },
+      { label: 'Registration', value: 'External form' },
+      { label: 'Schedule', value: 'Published online' },
     ],
+    headline: 'Attend Our Training Programs',
+    scheduleLink: 'https://bit.ly/ITCPH2026TrainingCalendar',
+    contactNumbers: '+63 929-318-2830 (Smart), +63 926-616-5748 (Globe)',
+    registrations: [
+      {
+        label: '2026 Training Registration',
+        url: 'https://docs.google.com/forms/d/e/1FAIpQLSeum5KMkgjZB5gR85jMKPtRoooBToMuJf1E8LjsZzi_hnjaSw/viewform',
+      },
+      {
+        label: '2025 Training Registration',
+        url: 'https://bit.ly/ITCPH2025CalendaredTrainingRegistration',
+      },
+    ],
+    programs: [
+      {
+        id: 'program-pig-husbandry',
+        category: 'Trainer development',
+        title: "National Trainer's Course on Pig Husbandry",
+        duration: 'Scheduled per batch',
+        audience: 'Agricultural extension workers, trainers, cooperative leaders, and farm technicians',
+        description:
+          'A flagship trainer-preparation course focused on updated swine husbandry standards, facilitation methods, and field-ready extension delivery.',
+        registrationUrl:
+          'https://docs.google.com/forms/d/e/1FAIpQLSeum5KMkgjZB5gR85jMKPtRoooBToMuJf1E8LjsZzi_hnjaSw/viewform',
+        registrationNote: 'Use the current batch form',
+        actionLabel: 'Register or inquire',
+      },
+      {
+        id: 'program-animal-waste',
+        category: 'Environmental management',
+        title: "National Trainer's Course on Animal Waste Management and Utilization",
+        duration: 'Scheduled per batch',
+        audience: 'Cooperative officers, LGU technicians, farm managers, and trainer candidates',
+        description:
+          'Covers practical waste-management approaches, utilization pathways, and trainer-ready guidance for sustainable swine operations.',
+        registrationUrl:
+          'https://docs.google.com/forms/d/e/1FAIpQLSeum5KMkgjZB5gR85jMKPtRoooBToMuJf1E8LjsZzi_hnjaSw/viewform',
+        registrationNote: 'See the published calendar for the next intake',
+        actionLabel: 'Register or inquire',
+      },
+      {
+        id: 'program-labs',
+        category: 'Specialized short course',
+        title: 'Sustainable Pig Farming - Lactic Acid Bacteria Serum (SPF-LABS)',
+        duration: 'Scheduled per batch',
+        audience: 'Farmers, farm school operators, agri-entrepreneurs, and extension facilitators',
+        description:
+          'Introduces the LABS approach used in sustainable pig farming, with emphasis on fermentation practice, herd-health support, and farm-level application.',
+        registrationUrl:
+          'https://docs.google.com/forms/d/e/1FAIpQLSeum5KMkgjZB5gR85jMKPtRoooBToMuJf1E8LjsZzi_hnjaSw/viewform',
+        registrationNote: 'Best paired with the active training calendar',
+        actionLabel: 'Register or inquire',
+      },
+    ],
+    resources: [],
+    stories: [],
+    prompts: [],
+    placeholder: null,
+  },
+  {
+    id: 'corp-materials',
+    hotspotId: 'hotspot-corp-materials',
+    title: 'Corporate Materials',
+    access: 'public',
+    badge: 'Institutional Publications',
+    summary: 'Brochures, institutional profile references, annual accomplishment materials, and promotional publications from ITCPH.',
+    description:
+      'This publication shelf gathers the institutional references most visitors ask for when orienting partner agencies, trainees, and event-floor stakeholders to ITCPH.',
+    highlights: [
+      'Separates institutional publications from the success-story module so visitors can find each content type faster.',
+      'Uses brochure-style cards that can absorb future PDF covers or thumbnails without changing the layout.',
+      'Keeps the official materials hub visible as the source for expanded publication lists.',
+    ],
+    quickStats: [
+      { label: 'Shelf type', value: 'Brochure library' },
+      { label: 'Primary source', value: 'Materials hub' },
+      { label: 'Audience', value: 'Partners and trainees' },
+    ],
+    publications: [
+      {
+        id: 'pub-institutional-profile',
+        title: 'ITCPH Institutional Profile',
+        subtitle: 'Center overview',
+        coverLabel: 'Institutional Profile',
+        description:
+          'A concise profile of the center mission, facilities, service areas, and training mandate for visitors who need an immediate institutional snapshot.',
+        actionLabel: 'View publication',
+        href: 'https://www.atiitcph.com/materials',
+        accent: '#1a6ab4',
+      },
+      {
+        id: 'pub-learning-brochure',
+        title: 'Learning by Doing Brochure',
+        subtitle: 'Program brochure',
+        coverLabel: 'Learning by Doing',
+        description:
+          'A promotional brochure summarizing ITCPH learning pathways, delivery formats, and value proposition for trainees and partner organizations.',
+        actionLabel: 'View brochure',
+        href: 'https://www.atiitcph.com/materials',
+        accent: '#2a7a3b',
+      },
+      {
+        id: 'pub-annual-report',
+        title: 'Annual Accomplishment Report',
+        subtitle: 'Impact report',
+        coverLabel: 'Annual Report',
+        description:
+          'Highlights annual milestones, extension reach, capability-building outputs, and partnership work across the center\'s swine-development programs.',
+        actionLabel: 'View report',
+        href: 'https://www.atiitcph.com/materials',
+        accent: '#a55c1b',
+      },
+      {
+        id: 'pub-training-calendar',
+        title: 'Training Calendar and Fees',
+        subtitle: 'Schedule guide',
+        coverLabel: 'Training Calendar',
+        description:
+          'A schedule-oriented publication that helps visitors review upcoming courses, fee references, and current training windows before registering.',
+        actionLabel: 'Open calendar',
+        href: 'https://bit.ly/ITCPH2026TrainingCalendar',
+        accent: '#7d5a14',
+      },
+    ],
+    externalLink: 'https://www.atiitcph.com/materials',
     resources: [],
     stories: [],
     prompts: [],

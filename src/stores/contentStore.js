@@ -14,11 +14,33 @@ const STORAGE_KEY = 'itcph-booth-v6-final';
  */
 export const useContentStore = defineStore('content', {
   state: () => {
+    const defaultModules = getBoothModules();
+    const defaultOutcomes = getOutcomeMetrics();
+
     // Attempt to load from localStorage first
     const saved = localStorage.getItem(STORAGE_KEY);
     if (saved) {
       try {
-        return JSON.parse(saved);
+        const parsed = JSON.parse(saved);
+        const savedModulesById = new Map((parsed.modules || []).map((module) => [module.id, module]));
+
+        return {
+          ...parsed,
+          brand: AGRI_BOOTH_BRAND,
+          outcomes: defaultOutcomes,
+          modules: defaultModules.map((module) => {
+            const savedModule = savedModulesById.get(module.id);
+
+            if (!savedModule) {
+              return module;
+            }
+
+            return {
+              ...module,
+              resources: savedModule.resources ?? module.resources,
+            };
+          }),
+        };
       } catch (e) {
         console.error('Failed to parse saved content:', e);
       }
@@ -27,8 +49,8 @@ export const useContentStore = defineStore('content', {
     // Default state derived from static models
     return {
       brand: AGRI_BOOTH_BRAND,
-      modules: getBoothModules(),
-      outcomes: getOutcomeMetrics(),
+      modules: defaultModules,
+      outcomes: defaultOutcomes,
       // Analytics & Logs are stored in memory for the session but could be persisted
       visitorLogs: [],
       stats: {

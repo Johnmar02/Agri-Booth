@@ -31,9 +31,11 @@ const hotspotLabels = {
   "hotspot-iec": "IEC Training Materials",
   "hotspot-newsletters": "Farm Newsletters",
   "hotspot-corporate": "Success Stories",
+  "hotspot-corp-materials": "Corporate Materials",
   "hotspot-chat": "Technical Advisory Chat",
-  "hotspot-calculators": "Digital ROI Calculators",
+  "hotspot-calculators": "Digital Calculators",
   "hotspot-elearning": "E-Learning Portal",
+  "hotspot-training": "Training Programs",
   "hotspot-bebu": "Bebu Game & Trivia",
 };
 
@@ -147,10 +149,12 @@ const buildHotspots = (modelCenter) => {
   addHotspot("hotspot-virtual-tour", cx + 0.3, cy - 0.3, cz - 1.2);
   addHotspot("hotspot-iec", cx - 0.4, cy - 0.3, cz + 1.0); // was dot_brochure_rack
   addHotspot("hotspot-newsletters", cx - 1.2, cy - 0.4, cz + 1.0); // was dot_left_shelf
-  addHotspot("hotspot-corporate", cx - 0.5, cy + 0.1, cz + .9); // was dot_banner
+  addHotspot("hotspot-corporate", cx - 0.5, cy + 0.1, cz + 0.9); // was dot_banner
   addHotspot("hotspot-chat", cx + 0.95, cy - 0.4, cz + 0.9); // was dot_table
   addHotspot("hotspot-calculators", cx + 1.4, cy - 0.2, cz + 0.9); // was dot_right_shelf
   addHotspot("hotspot-elearning", cx + 1.0, cy + 0.8, cz + 1.8); // was dot_top_sign
+  addHotspot("hotspot-corp-materials", cx - 1.0, cy + 0.8, cz + 1.8);
+  addHotspot("hotspot-training", cx + 0.95, cy - 0.7, cz + 1.5);
   addHotspot("hotspot-bebu", cx - 1.2, cy + 0.1, cz + 1.0); // was dot_chairs
 };
 
@@ -273,9 +277,9 @@ onUnmounted(() => {
 <template>
   <div ref="canvasContainer" class="canvas-container">
     <Transition name="tooltip-fade">
-      <div 
-        v-if="hoveredLabel" 
-        class="hotspot-tooltip" 
+      <div
+        v-if="hoveredLabel"
+        class="hotspot-tooltip"
         :style="{ left: tooltipPos.x + 'px', top: tooltipPos.y + 'px' }"
       >
         <div class="tooltip-icon">✦</div>
@@ -331,10 +335,12 @@ onUnmounted(() => {
   white-space: nowrap;
 }
 
-.tooltip-fade-enter-active, .tooltip-fade-leave-active {
+.tooltip-fade-enter-active,
+.tooltip-fade-leave-active {
   transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
 }
-.tooltip-fade-enter-from, .tooltip-fade-leave-to {
+.tooltip-fade-enter-from,
+.tooltip-fade-leave-to {
   opacity: 0;
   transform: scale(0.9) translate(-5%, -5%);
 }
