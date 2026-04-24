@@ -444,13 +444,13 @@ Moreover, Gil advocates the importance of continuous learning. Farmers must dedi
     title: 'E-Learning',
     access: 'gated',
     badge: 'Portal placeholder',
-    summary: 'A launch point for future LMS and digital learning integrations without coupling the frontend to a live platform yet.',
+    summary: 'A launch point for LMS and digital learning integrations.',
     description:
-      'The portal stays mocked in this frontend-only build so the interface can be validated now while LMS handshakes, enrollment rules, and back-office flows are handled later.',
+      'The portal is designed for a frontend-only build so the interface can be validated independently.',
     highlights: [
-      'Supports a future handoff to ATI and ITCPH learning portals.',
-      'Keeps portal navigation visible even before live authentication is attached.',
-      'Protects the frontend from broken deep links while requirements are still evolving.',
+      'Purely frontend implementation to ensure architectural decoupling.',
+      'Demonstrates LMS navigation and portal structure in a controlled environment.',
+      'Protects the frontend from external dependencies during validation.',
     ],
     quickStats: [
       { label: 'Status', value: 'Frontend mock' },

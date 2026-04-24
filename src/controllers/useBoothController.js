@@ -419,7 +419,7 @@ export function useBoothController() {
    *
    * WHY THIS EXISTS:
    * "Items Collected" should be derived from actual booth interactions so reporting stays
-   * consistent even before backend analytics are available.
+   * consistent across the frontend session.
    *
    * @param {string} resourceId
    */
