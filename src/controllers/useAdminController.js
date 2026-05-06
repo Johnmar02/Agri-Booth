@@ -90,14 +90,17 @@ function refreshAdminSession() {
   scheduleAutoLogout();
 }
 
-function restoreAdminSession() {
+async function restoreAdminSession() {
   const session = readAdminSession();
   if (isSessionValid(session)) {
-    isAuthenticated.value = true;
-    scheduleAutoLogout();
-    
-    // We can't easily call fetch methods here because they are inside useAdminController
-    // But we can use the store directly if needed, or let the view call them.
+    // Verify with backend that the cookie is still valid
+    const result = await apiClient.isAdminAuthenticated();
+    if (result.ok) {
+      isAuthenticated.value = true;
+      scheduleAutoLogout();
+    } else {
+      clearAdminSession();
+    }
   } else {
     clearAdminSession();
   }
@@ -108,6 +111,14 @@ function clearAdminSession() {
   window.localStorage.removeItem(ADMIN_TOKEN_KEY);
   clearAutoLogoutTimer();
 }
+
+// Register global 401 handler
+apiClient.onUnauthorized(() => {
+  if (isAuthenticated.value) {
+    console.warn('Session expired or unauthorized. Logging out...');
+    clearAdminSession();
+  }
+});
 
 function activityWatcher() {
   if (isAuthenticated.value) {
@@ -141,7 +152,7 @@ export function useAdminController() {
       return true;
     }
 
-    loginForm.error = result.message || 'Access denied.';
+    loginForm.error = result.data?.message || result.message || 'Invalid username or password.';
     return false;
   };
 
@@ -223,16 +234,17 @@ export function useAdminController() {
       ? await apiClient.createBebuQuestion(payload)
       : apiClient.addResource
         ? await apiClient.addResource(moduleId, payload)
-        : { ok: true, id: `resource-${Date.now()}` };
+        : { ok: true, data: { id: `resource-${Date.now()}` } };
     
     clearInterval(interval);
     uploadProgress.value = 100;
 
     if (result.ok) {
       const store = getContentStore();
+      const d = result.data;
       const savedResource = isBebuQuestion
         ? {
-            id: result.questionId,
+            id: d.questionId || d.id || d.Id,
             prompt: payload.Question,
             options: [
               { id: 'a', label: payload.OptionA },
@@ -245,7 +257,7 @@ export function useAdminController() {
           }
         : {
             ...payload,
-            id: result.id,
+            id: d.id || d.Id,
             fileName: resourceDraft.file?.name || 'internal_asset.pdf'
           };
 
@@ -287,7 +299,11 @@ export function useAdminController() {
     return {
       totalVisitors: store.stats.totalRegistrations,
       totalDownloads: store.stats.totalResourceDownloads,
-      popularModule: topHotspotId.replace('hotspot-', '').replace('-', ' ').toUpperCase()
+      popularModule: topHotspotId.replace('hotspot-', '').replace('-', ' ').toUpperCase(),
+      recentVisitors: store.stats.recentVisitors,
+      monthlyVisitors: store.stats.monthlyVisitors,
+      averageRating: store.stats.averageRating,
+      totalFeedbacks: store.stats.totalFeedbacks
     };
   });
 

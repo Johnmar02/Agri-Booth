@@ -242,17 +242,18 @@ export function useLogbookController(options = {}) {
     try {
       const result = await apiClient.loginVisitor(form.email, form.password);
 
-      if (result.ok) {
+      if (result.ok && result.data) {
+        const d = result.data;
         return {
           ok: true,
           payload: {
-            name: result.fullName,
-            email: result.email,
+            name: d.fullName || d.FullName || d.name,
+            email: d.email || d.Email,
           },
         };
       }
       
-      errors.form = result.message || 'Login failed. Please check your credentials.';
+      errors.form = result.data?.message || result.message || 'Login failed. Please check your credentials.';
       return { ok: false };
     } catch (err) {
       errors.form = 'Connection error. Please try again.';
@@ -295,7 +296,7 @@ export function useLogbookController(options = {}) {
         };
       }
       
-      errors.form = result.message || 'Registration failed. Please try again.';
+      errors.form = result.data?.message || result.message || 'Registration failed. Please try again.';
       return { ok: false };
     } catch (err) {
       errors.form = 'Connection error. Please try again.';

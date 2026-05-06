@@ -11,6 +11,8 @@ function buildUrl(endpoint) {
   return `${BASE_URL.replace(/\/$/, '')}/${endpoint.replace(/^\//, '')}`;
 }
 
+let onUnauthorizedCallback = null;
+
 /**
  * UTILS: Generic fetch wrapper to handle JSON and errors.
  */
@@ -26,25 +28,41 @@ async function request(endpoint, options = {}) {
       credentials: 'include',
     });
 
-    // Check if the response actually contains JSON
+    if (response.status === 401 && onUnauthorizedCallback) {
+      onUnauthorizedCallback();
+    }
+
     const contentType = response.headers.get('content-type');
-    let data = {};
+    let data = null;
+    
     if (contentType && contentType.includes('application/json')) {
       data = await response.json();
     } else {
-      // If it's not JSON (like a 404 HTML page), just get the text or keep data empty
       const text = await response.text();
-      data = { message: text || `Error ${response.status}` };
+      data = text || `Error ${response.status}`;
     }
 
-    return { ...data, _status: response.status, ok: response.ok };
+    return { data, status: response.status, ok: response.ok };
   } catch (error) {
     console.error(`API Error (${endpoint}):`, error);
-    return { ok: false, message: 'Connection error. Please try again later.' };
+    return { ok: false, data: null, message: 'Connection error. Please try again later.' };
   }
 }
 
 export const apiClient = {
+  /**
+   * Register a callback for when the server returns a 401 Unauthorized.
+   */
+  onUnauthorized(callback) {
+    onUnauthorizedCallback = callback;
+  },
+  /**
+   * AuthController: Checks if the current admin session is still valid.
+   */
+  async isAdminAuthenticated() {
+    return await request('/Auth/me');
+  },
+
   /**
    * AuthController: Authenticates an admin login attempt using Cookies.
    */

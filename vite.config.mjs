@@ -15,6 +15,12 @@ export default defineConfig({
         target: 'https://192.168.1.124:7137',
         changeOrigin: true,
         secure: false
+      },
+      '/hubs': {
+        target: 'https://192.168.1.124:7137',
+        changeOrigin: true,
+        secure: false,
+        ws: true // Enable WebSocket proxying
       }
     }
   }

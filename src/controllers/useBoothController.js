@@ -1,6 +1,7 @@
 import { computed, reactive, ref, watch } from 'vue';
 import { useContentStore } from '@/stores/contentStore';
 import { useBebuGameStore } from '@/stores/bebuGame';
+import { useVisitorStore } from '@/stores/visitor';
 import {
   AGRI_BOOTH_BRAND,
   getAdvisoryResponseLibrary,
@@ -176,6 +177,7 @@ function getCalculatorResults(inputs) {
 export function useBoothController() {
   const contentStore = useContentStore();
   const bebuStore = useBebuGameStore();
+  const visitorStore = useVisitorStore();
   
   const outcomeMetrics = computed(() => contentStore.outcomes);
   // Modules and Hotspots are now reactive from the store
@@ -210,10 +212,19 @@ export function useBoothController() {
 
   const visitorSession = reactive(initialVisitorSession);
 
+  // Sync initial session to visitor store
+  if (visitorSession.isRegistered) {
+    visitorStore.visitorId = visitorSession.visitorId;
+    visitorStore.isRegistered = true;
+  }
+
   watch(
     visitorSession,
     (newSession) => {
       writeSessionJson(VISITOR_SESSION_KEY, newSession);
+      // Sync to visitor store
+      visitorStore.visitorId = newSession.visitorId;
+      visitorStore.isRegistered = newSession.isRegistered;
     },
     { deep: true }
   );
@@ -235,6 +246,9 @@ export function useBoothController() {
     trackedResourceIds.value = [];
     writeSessionJson(TRACKED_RESOURCES_SESSION_KEY, []);
     writeSessionJson(VISITOR_SESSION_KEY, visitorSession);
+    
+    // Clear visitor store
+    visitorStore.logoutVisitor();
 
     if (inactivityTimer.value) {
       clearTimeout(inactivityTimer.value);
@@ -407,7 +421,7 @@ export function useBoothController() {
     }
 
     // Standard Dashboard Gating: Data collection first
-    if (!visitorSession.isRegistered) {
+    if (module.access === 'gated' && !visitorSession.isRegistered) {
       openLogbook(moduleId);
       return;
     }
@@ -528,6 +542,10 @@ export function useBoothController() {
     visitorSession.visitorId = result.payload.visitorId || result.payload.id;
     visitorSession.profile = result.payload;
 
+    // Explicitly sync to visitor store immediately to avoid race conditions
+    visitorStore.visitorId = visitorSession.visitorId;
+    visitorStore.isRegistered = true;
+
     isLogbookOpen.value = false;
     resetInactivityTimer();
 
@@ -569,6 +587,10 @@ export function useBoothController() {
     visitorSession.displayName = result.payload.name;
     visitorSession.visitorId = result.payload.visitorId || result.payload.id;
     visitorSession.profile = result.payload;
+
+    // Explicitly sync to visitor store immediately to avoid race conditions
+    visitorStore.visitorId = visitorSession.visitorId;
+    visitorStore.isRegistered = true;
 
     isLogbookOpen.value = false;
     resetInactivityTimer();

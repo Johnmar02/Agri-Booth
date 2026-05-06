@@ -3,6 +3,30 @@ import { ref, computed } from 'vue';
 import { apiClient } from '@/services/apiClient';
 import { useVisitorStore } from './visitor';
 
+/**
+ * UTILS: Maps raw database question objects to the frontend format.
+ * Matches the logic used in the Admin Dashboard's contentStore.
+ */
+function mapDatabaseQuestion(q) {
+  const id = q.id ?? q.Id;
+  const correctAnswer = String(q.correctAnswer ?? q.CorrectAnswer ?? 'A').toUpperCase();
+
+  return {
+    id,
+    prompt: q.question ?? q.Question ?? '',
+    category: q.category ?? q.Category ?? 'General',
+    difficulty: q.difficulty ?? q.Difficulty ?? 'Easy',
+    options: [
+      { id: 'a', label: q.optionA ?? q.OptionA ?? '' },
+      { id: 'b', label: q.optionB ?? q.OptionB ?? '' },
+      { id: 'c', label: q.optionC ?? q.OptionC ?? '' },
+      { id: 'd', label: q.optionD ?? q.OptionD ?? '' }
+    ],
+    correctOptionId: correctAnswer.toLowerCase(),
+    explanation: `The correct answer is ${correctAnswer}.`
+  };
+}
+
 export const useBebuGameStore = defineStore('bebuGame', () => {
   const visitorStore = useVisitorStore();
   
@@ -26,42 +50,56 @@ export const useBebuGameStore = defineStore('bebuGame', () => {
   const selectedOptionId = ref('');
   const lastResult = ref(null);
 
+  /**
+   * ADMIN METHOD: Fetches all active questions directly from the database
+   * bypasses the session-start endpoint to ensure guests can play instantly.
+   */
   async function startGame(questionCount = 10) {
-    if (!visitorStore.visitorId) {
-      error.value = "Visitor not registered.";
-      return;
-    }
-
     isLoading.value = true;
     error.value = null;
+    currentSessionId.value = null; 
+
     try {
-      const response = await apiClient.startGameSession(visitorStore.visitorId, questionCount);
-      if (response.ok) {
-        currentSessionId.value = response.gameSessionId;
-        questions.value = response.questions.map(q => ({
-          id: q.id,
-          prompt: q.question,
-          options: [
-            { id: 'a', label: q.optionA },
-            { id: 'b', label: q.optionB },
-            { id: 'c', label: q.optionC },
-            { id: 'd', label: q.optionD }
-          ],
-          category: q.category,
-          difficulty: q.difficulty
-        }));
+      // Step 1: Use the Admin's API call to get all live questions
+      const response = await apiClient.getBebuQuestions();
+      
+      if (response.ok && response.data) {
+        let allQuestions = response.data;
+
+        // Step 2: Filter active and Shuffle them locally for variety
+        allQuestions = allQuestions
+          .filter(q => q.isActive ?? q.IsActive ?? true)
+          .sort(() => Math.random() - 0.5)
+          .slice(0, questionCount);
+
+        // Step 3: Map to frontend format
+        questions.value = allQuestions.map(mapDatabaseQuestion);
+        
+        // Step 4: Reset game state
         currentQuestionIndex.value = 0;
         score.value = 0;
         isGameOver.value = false;
         hasAnswered.value = false;
         selectedOptionId.value = '';
+        lastResult.value = null;
+
+        // Step 5: (Optional) Try to create a session in the background for registered users
+        if (visitorStore.visitorId) {
+          apiClient.startGameSession(visitorStore.visitorId, questionCount)
+            .then(res => {
+              if (res.ok) currentSessionId.value = res.data.gameSessionId;
+            });
+        }
       } else {
-        error.value = response.message || "Failed to start game.";
+        error.value = "Unable to load questions from database.";
       }
     } catch (e) {
-      error.value = "Connection error.";
+      console.error("Bebu Game Load Error:", e);
+      error.value = "Connection error. Ensure your backend is running.";
     } finally {
-      isLoading.value = false;
+      setTimeout(() => {
+        isLoading.value = false;
+      }, 300);
     }
   }
 
@@ -70,28 +108,41 @@ export const useBebuGameStore = defineStore('bebuGame', () => {
 
     isLoading.value = true;
     selectedOptionId.value = answerGiven;
-    try {
-      const response = await apiClient.submitAnswer({
-        gameSessionId: currentSessionId.value,
-        questionId: currentQuestion.value.id,
-        answerGiven: answerGiven
-      });
+    
+    // Logic: If we have a session (logged in), sync to DB. Otherwise, handle locally.
+    if (currentSessionId.value) {
+      try {
+        const response = await apiClient.submitAnswer({
+          gameSessionId: currentSessionId.value,
+          questionId: currentQuestion.value.id,
+          answerGiven: answerGiven.toUpperCase()
+        });
 
-      if (response.ok) {
-        hasAnswered.value = true;
-        lastResult.value = response;
-        if (response.isCorrect) {
-          score.value = response.currentScore;
+        if (response.ok && response.data) {
+          const d = response.data;
+          hasAnswered.value = true;
+          lastResult.value = d;
+          score.value = d.currentScore;
+          return d;
         }
-        return response;
-      } else {
-        error.value = response.message;
+      } catch (e) {
+        console.warn("Failed to sync answer to server, falling back to local scoring.");
       }
-    } catch (e) {
-      error.value = "Failed to submit answer.";
-    } finally {
-      isLoading.value = false;
     }
+
+    // Local Scoring Fallback (for guests or connection hiccups)
+    hasAnswered.value = true;
+    const isCorrect = answerGiven.toLowerCase() === currentQuestion.value.correctOptionId.toLowerCase();
+    if (isCorrect) score.value++;
+    
+    lastResult.value = {
+      isCorrect,
+      correctAnswer: currentQuestion.value.correctOptionId.toUpperCase(),
+      currentScore: score.value
+    };
+    
+    isLoading.value = false;
+    return lastResult.value;
   }
 
   async function nextQuestion() {
@@ -108,28 +159,26 @@ export const useBebuGameStore = defineStore('bebuGame', () => {
   }
 
   async function finishGame() {
-    if (!currentSessionId.value) return;
-
-    isLoading.value = true;
-    try {
-      const response = await apiClient.finishGame(currentSessionId.value);
-      if (response.ok) {
-        isGameOver.value = true;
+    isGameOver.value = true;
+    if (currentSessionId.value) {
+      isLoading.value = true;
+      try {
+        await apiClient.finishGame(currentSessionId.value);
         fetchLeaderboard();
         fetchHistory();
+      } catch (e) {
+        console.error("Failed to sync finish state.");
+      } finally {
+        isLoading.value = false;
       }
-    } catch (e) {
-      error.value = "Failed to finish game.";
-    } finally {
-      isLoading.value = false;
     }
   }
 
   async function fetchLeaderboard() {
     try {
       const response = await apiClient.getLeaderboard();
-      if (response.ok) {
-        leaderboard.value = response;
+      if (response.ok && response.data) {
+        leaderboard.value = response.data;
       }
     } catch (e) {
       console.error("Failed to fetch leaderboard");
@@ -140,8 +189,8 @@ export const useBebuGameStore = defineStore('bebuGame', () => {
     if (!visitorStore.visitorId) return;
     try {
       const response = await apiClient.getGameHistory(visitorStore.visitorId);
-      if (response.ok) {
-        history.value = response;
+      if (response.ok && response.data) {
+        history.value = response.data;
       }
     } catch (e) {
       console.error("Failed to fetch history");

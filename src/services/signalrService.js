@@ -7,7 +7,15 @@ import * as signalR from '@microsoft/signalr';
  * It ensures that credentials (cookies) are sent with the connection request.
  */
 
-const BASE_URL = import.meta.env.VITE_API_BASE_URL.replace(/\/api\/$/, ''); // Remove /api/ for hub paths
+/**
+ * SERVICE: signalrService.js
+ * 
+ * This service manages the real-time connection to the .NET SignalR Hubs.
+ * It ensures that credentials (cookies) are sent with the connection request.
+ */
+
+// If using Vite proxy, hub paths should start from root /hubs
+const HUB_BASE = '/hubs';
 
 class SignalRService {
   constructor() {
@@ -17,14 +25,16 @@ class SignalRService {
 
   /**
    * Initializes the connection to a specific hub.
-   * @param {string} hubPath - The path to the hub (e.g., '/hubs/notifications')
+   * @param {string} hubPath - The path to the hub (e.g., '/notifications')
    */
-  async startConnection(hubPath = '/hubs/notifications') {
+  async startConnection(hubPath = '/notifications') {
     if (this.connection) {
       await this.connection.stop();
     }
 
-    const url = `${BASE_URL}${hubPath}`;
+    // Ensure path starts with / and doesn't duplicate hubs
+    const cleanPath = hubPath.startsWith('/') ? hubPath : `/${hubPath}`;
+    const url = cleanPath.startsWith('/hubs') ? cleanPath : `/hubs${cleanPath}`;
     
     this.connection = new signalR.HubConnectionBuilder()
       .withUrl(url, {
@@ -46,6 +56,7 @@ class SignalRService {
       });
     } catch (err) {
       console.error('SignalR Connection Error: ', err);
+      // Retry in 5 seconds
       setTimeout(() => this.startConnection(hubPath), 5000);
     }
   }

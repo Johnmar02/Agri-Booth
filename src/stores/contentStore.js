@@ -4,19 +4,21 @@ import { apiClient } from '@/services/apiClient';
 
 function mapTriviaQuestion(question) {
   const id = question.id ?? question.Id;
-  const correctAnswer = String(question.correctAnswer ?? question.CorrectAnswer ?? 'A').toLowerCase();
+  const correctAnswer = String(question.correctAnswer ?? question.CorrectAnswer ?? 'A').toUpperCase();
 
   return {
     id,
     prompt: question.question ?? question.Question ?? '',
+    category: question.category ?? question.Category ?? 'General',
+    difficulty: question.difficulty ?? question.Difficulty ?? 'Easy',
     options: [
       { id: 'a', label: question.optionA ?? question.OptionA ?? '' },
       { id: 'b', label: question.optionB ?? question.OptionB ?? '' },
       { id: 'c', label: question.optionC ?? question.OptionC ?? '' },
       { id: 'd', label: question.optionD ?? question.OptionD ?? '' }
     ],
-    correctOptionId: correctAnswer,
-    explanation: `Correct answer: ${correctAnswer.toUpperCase()}`
+    correctOptionId: correctAnswer.toLowerCase(),
+    explanation: `Correct answer: ${correctAnswer}`
   };
 }
 
@@ -51,7 +53,8 @@ export const useContentStore = defineStore('content', {
       try {
         const results = await Promise.allSettled([
           apiClient.getIECMaterials(),
-          apiClient.getTrainingPrograms()
+          apiClient.getTrainingPrograms(),
+          this.fetchBebuQuestions()
         ]);
 
         const [materialsRes, programsRes] = results;
@@ -59,16 +62,14 @@ export const useContentStore = defineStore('content', {
         if (materialsRes.status === 'fulfilled' && materialsRes.value.ok) {
           const iecModule = this.modules.find(m => m.id === 'iec-materials');
           if (iecModule) {
-            // Backend returns IECMaterialDto list
-            iecModule.materials = materialsRes.value.data || materialsRes.value;
+            iecModule.materials = materialsRes.value.data || [];
           }
         }
 
         if (programsRes.status === 'fulfilled' && programsRes.value.ok) {
           const trainingModule = this.modules.find(m => m.id === 'training-programs');
           if (trainingModule) {
-            // Backend returns TrainingDto list
-            trainingModule.programs = programsRes.value.data || programsRes.value;
+            trainingModule.programs = programsRes.value.data || [];
           }
         }
 
@@ -86,13 +87,14 @@ export const useContentStore = defineStore('content', {
     async fetchStats() {
       try {
         const statsRes = await apiClient.getStats();
-        if (statsRes.ok) {
+        if (statsRes.ok && statsRes.data) {
+          const s = statsRes.data;
           this.stats = {
             ...this.stats,
-            totalRegistrations: statsRes.totalVisitors || statsRes.totalRegistrations,
-            totalResourceDownloads: statsRes.totalDownloads,
-            totalFeedbacks: statsRes.totalFeedbacks,
-            averageRating: statsRes.averageRating
+            totalRegistrations: s.totalVisitors || s.totalRegistrations || 0,
+            totalResourceDownloads: s.totalDownloads || 0,
+            totalFeedbacks: s.totalFeedbacks || 0,
+            averageRating: s.averageRating || 0
           };
         }
         
@@ -109,13 +111,11 @@ export const useContentStore = defineStore('content', {
     async fetchVisitors() {
       try {
         const visitorsRes = await apiClient.getVisitors();
-        if (visitorsRes.ok) {
-          // Backend returns a list of visitors with properties matching our log structure
-          // but we might need to map them if names differ (e.g. FullName vs name)
-          const visitors = visitorsRes.data || visitorsRes;
+        if (visitorsRes.ok && visitorsRes.data) {
+          const visitors = visitorsRes.data;
           if (Array.isArray(visitors)) {
             this.visitorLogs = visitors.map(v => ({
-              id: v.id,
+              id: v.id || v.Id,
               name: v.fullName || v.FullName || v.name,
               email: v.email || v.Email,
               affiliations: v.affiliation || v.Affiliation || v.affiliations,
@@ -123,7 +123,7 @@ export const useContentStore = defineStore('content', {
               gender: v.gender || v.Gender,
               address: v.address || v.Address,
               submittedAt: v.visitedAt || v.VisitedAt || new Date().toISOString(),
-              itemsCollected: [] // Backend doesn't return these in the summary list usually
+              itemsCollected: []
             }));
           }
         }
@@ -135,8 +135,8 @@ export const useContentStore = defineStore('content', {
     async fetchBebuQuestions() {
       const questionsRes = await apiClient.getBebuQuestions();
 
-      if (questionsRes.ok) {
-        this.setBebuQuestions(questionsRes.data || questionsRes);
+      if (questionsRes.ok && questionsRes.data) {
+        this.setBebuQuestions(questionsRes.data);
       }
     },
 

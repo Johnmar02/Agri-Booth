@@ -171,29 +171,51 @@ const handleFileChange = (e, type) => {
         </header>
 
         <!-- OVERVIEW SECTION -->
-        <section v-if="activeSection === 'overview'" class="section-container">
-          <div class="stats-grid">
-            <div class="stat-card">
-              <span class="stat-label">Total Registrations</span>
-              <strong class="stat-value">{{ analytics.totalVisitors }}</strong>
-              <div class="stat-trend positive">Total engagement</div>
-            </div>
-            <div class="stat-card">
-              <span class="stat-label">Downloads</span>
-              <strong class="stat-value">{{ analytics.totalDownloads }}</strong>
-              <div class="stat-trend">Resource outreach</div>
-            </div>
-            <div class="stat-card">
-              <span class="stat-label">Most Popular</span>
-              <strong class="stat-value">{{ analytics.popularModule }}</strong>
-              <div class="stat-trend">Hotspot leader</div>
+        <section v-if="activeSection === 'overview'" class="section-container overview-section">
+          <div class="overview-header">
+            <div class="title-area">
+              <h3>Management Overview</h3>
+              <p>Key performance metrics and visitor engagement summary.</p>
             </div>
           </div>
 
-          <div class="welcome-banner">
-            <div class="banner-text">
-              <h3>System Overview</h3>
-              <p>Welcome back to the ITCPH Management Portal. All modules are currently operational and synchronized with the 3D Agri-Booth environment.</p>
+          <div class="stats-grid">
+            <div class="stat-card">
+              <span class="stat-label">Total Registrations</span>
+              <div class="stat-main">
+                <strong class="stat-value">{{ analytics.totalVisitors || visitorLogs.length }}</strong>
+                <span class="stat-unit">Entries</span>
+              </div>
+              <div class="stat-trend positive">Total visitor engagement</div>
+            </div>
+            
+            <div class="stat-card">
+              <span class="stat-label">Resources Distributed</span>
+              <div class="stat-main">
+                <strong class="stat-value">{{ analytics.totalDownloads }}</strong>
+                <span class="stat-unit">Downloads</span>
+              </div>
+              <div class="stat-trend">Knowledge outreach</div>
+            </div>
+
+            <div class="stat-card">
+              <span class="stat-label">Popular Module</span>
+              <div class="stat-main">
+                <strong class="stat-value mini">{{ analytics.popularModule }}</strong>
+              </div>
+              <div class="stat-trend">Top interaction point</div>
+            </div>
+          </div>
+
+          <div class="welcome-banner booth-banner">
+            <div class="banner-content">
+              <div class="banner-text">
+                <h3>Digital Agri-Booth Systems</h3>
+                <p>Welcome to the administrative portal. All interactive modules, including the Bebu Trivia Game and IEC Materials catalog, are currently live and synchronized with the 3D environment.</p>
+              </div>
+              <div class="banner-decoration">
+                <img src="/ITCPH_icon.png" alt="Booth Icon" class="decoration-img" />
+              </div>
             </div>
           </div>
         </section>
@@ -222,8 +244,8 @@ const handleFileChange = (e, type) => {
               <div v-if="isAddingResource" class="inline-form-container">
                 <div class="panel-header">
                   <div class="panel-info">
-                    <h3>{{ selectedModule?.id === 'bebu-game' ? 'New Bebu Game Question' : `New Material for ${selectedModule?.title}` }}</h3>
-                    <p>{{ selectedModule?.id === 'bebu-game' ? 'Add one multiple-choice question with A, B, C, and D choices.' : 'Enter the details for the new asset below.' }}</p>
+                    <h3>{{ selectedModule?.id === 'bebu-game' ? 'Create New Trivia Question' : `New Material for ${selectedModule?.title}` }}</h3>
+                    <p>{{ selectedModule?.id === 'bebu-game' ? 'Add a specialized pig husbandry quiz item to the live booth.' : 'Enter the details for the new asset below.' }}</p>
                   </div>
                   <button class="btn-text" @click="$emit('cancel-add')">Cancel</button>
                 </div>
@@ -231,56 +253,56 @@ const handleFileChange = (e, type) => {
                 <form class="upload-form" @submit.prevent="$emit('commit-resource', selectedModuleId)">
                   <div v-if="selectedModule?.id === 'bebu-game'" class="form-grid">
                     <div class="field full">
-                      <label>Question</label>
+                      <label>Trivia Question</label>
                       <textarea
                         rows="3"
-                        placeholder="Enter the trivia question..."
+                        placeholder="e.g. What is the ideal temperature for a newborn piglet?"
                         :value="resourceDraft.question"
-                        @input="$emit('update-draft', { question: $event.target.value })"
+                        @input="$input => $emit('update-draft', { question: $input.target.value })"
                         required
                       ></textarea>
                     </div>
 
                     <div class="field">
-                      <label>A</label>
+                      <label>Option A</label>
                       <input
                         type="text"
                         placeholder="Choice A"
                         :value="resourceDraft.optionA"
-                        @input="$emit('update-draft', { optionA: $event.target.value })"
+                        @input="$input => $emit('update-draft', { optionA: $input.target.value })"
                         required
                       />
                     </div>
 
                     <div class="field">
-                      <label>B</label>
+                      <label>Option B</label>
                       <input
                         type="text"
                         placeholder="Choice B"
                         :value="resourceDraft.optionB"
-                        @input="$emit('update-draft', { optionB: $event.target.value })"
+                        @input="$input => $emit('update-draft', { optionB: $input.target.value })"
                         required
                       />
                     </div>
 
                     <div class="field">
-                      <label>C</label>
+                      <label>Option C</label>
                       <input
                         type="text"
                         placeholder="Choice C"
                         :value="resourceDraft.optionC"
-                        @input="$emit('update-draft', { optionC: $event.target.value })"
+                        @input="$input => $emit('update-draft', { optionC: $input.target.value })"
                         required
                       />
                     </div>
 
                     <div class="field">
-                      <label>D</label>
+                      <label>Option D</label>
                       <input
                         type="text"
                         placeholder="Choice D"
                         :value="resourceDraft.optionD"
-                        @input="$emit('update-draft', { optionD: $event.target.value })"
+                        @input="$input => $emit('update-draft', { optionD: $input.target.value })"
                         required
                       />
                     </div>
@@ -289,13 +311,22 @@ const handleFileChange = (e, type) => {
                       <label>Correct Answer</label>
                       <select
                         :value="resourceDraft.correctOptionId"
-                        @change="$emit('update-draft', { correctOptionId: $event.target.value })"
+                        @change="$input => $emit('update-draft', { correctOptionId: $input.target.value })"
                         required
                       >
-                        <option value="a">A</option>
-                        <option value="b">B</option>
-                        <option value="c">C</option>
-                        <option value="d">D</option>
+                        <option value="a">Option A</option>
+                        <option value="b">Option B</option>
+                        <option value="c">Option C</option>
+                        <option value="d">Option D</option>
+                      </select>
+                    </div>
+
+                    <div class="field">
+                      <label>Difficulty</label>
+                      <select :value="resourceDraft.difficulty" @change="$input => $emit('update-draft', { difficulty: $input.target.value })">
+                        <option>Easy</option>
+                        <option>Medium</option>
+                        <option>Hard</option>
                       </select>
                     </div>
                   </div>
@@ -307,7 +338,7 @@ const handleFileChange = (e, type) => {
                         type="text" 
                         placeholder="e.g. Swine Management Guide v2"
                         :value="resourceDraft.title" 
-                        @input="$emit('update-draft', { title: $event.target.value })" 
+                        @input="$input => $emit('update-draft', { title: $input.target.value })" 
                         required 
                       />
                     </div>
@@ -318,14 +349,14 @@ const handleFileChange = (e, type) => {
                         rows="3" 
                         placeholder="Brief summary of the content..."
                         :value="resourceDraft.description" 
-                        @input="$emit('update-draft', { description: $event.target.value })" 
+                        @input="$input => $emit('update-draft', { description: $input.target.value })" 
                         required
                       ></textarea>
                     </div>
 
                     <div class="field">
                       <label>Content Type</label>
-                      <select :value="resourceDraft.format" @change="$emit('update-draft', { format: $event.target.value })">
+                      <select :value="resourceDraft.format" @change="$input => $emit('update-draft', { format: $input.target.value })">
                         <option>PDF Document</option>
                         <option>Article / News</option>
                         <option>IEC Image</option>
@@ -386,10 +417,35 @@ const handleFileChange = (e, type) => {
                   </button>
                 </div>
 
-                <div class="resource-grid">
+                <div v-if="selectedModule?.id === 'bebu-game'" class="trivia-management-list">
+                   <div v-if="allResources.length === 0" class="empty-state">
+                    <p>No questions found.</p>
+                    <span>Create your first trivia item above.</span>
+                  </div>
+                  <div v-for="res in allResources" :key="res.id" class="trivia-record-card">
+                    <div class="trivia-record-header">
+                      <div class="trivia-meta-info">
+                        <span class="difficulty-badge" :class="res.difficulty?.toLowerCase()">{{ res.difficulty }}</span>
+                        <span class="category-tag">{{ res.category }}</span>
+                      </div>
+                      <button class="record-delete-btn" title="Delete Question" @click="$emit('delete-resource', { moduleId: selectedModule.id, resourceId: res.id })">&times;</button>
+                    </div>
+                    <div class="trivia-record-body">
+                      <h4>{{ res.prompt }}</h4>
+                      <div class="options-preview-grid">
+                        <div v-for="opt in res.options" :key="opt.id" class="option-preview-item" :class="{ 'is-correct-preview': opt.id === res.correctOptionId }">
+                          <span class="opt-id">{{ opt.id.toUpperCase() }}</span>
+                          <span class="opt-val">{{ opt.label }}</span>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+
+                <div v-else class="resource-grid">
                   <div v-if="allResources.length === 0" class="empty-state">
-                    <p>No managed {{ selectedModule?.id === 'bebu-game' ? 'questions' : 'materials' }} in this module.</p>
-                    <span>Click "{{ selectedModule?.id === 'bebu-game' ? 'Add Question' : 'Add Material' }}" to create your first item.</span>
+                    <p>No managed materials found.</p>
+                    <span>Click "Add Material" to create your first item.</span>
                   </div>
                   
                   <div
@@ -397,13 +453,10 @@ const handleFileChange = (e, type) => {
                     :key="res.id"
                     class="resource-card"
                   >
-                    <div class="res-type">{{ selectedModule?.id === 'bebu-game' ? 'Question' : res.format }}</div>
+                    <div class="res-type">{{ res.format }}</div>
                     <div class="res-body">
-                      <h4>{{ selectedModule?.id === 'bebu-game' ? res.prompt : res.title }}</h4>
-                      <p v-if="selectedModule?.id === 'bebu-game'">
-                        A. {{ res.options?.[0]?.label }} | B. {{ res.options?.[1]?.label }} | C. {{ res.options?.[2]?.label }} | D. {{ res.options?.[3]?.label }}
-                      </p>
-                      <p v-else>{{ res.description }}</p>
+                      <h4>{{ res.title }}</h4>
+                      <p>{{ res.description }}</p>
                     </div>
                     <div class="res-footer">
                       <button class="btn-danger" @click="$emit('delete-resource', { moduleId: selectedModule.id, resourceId: res.id })">
@@ -418,38 +471,58 @@ const handleFileChange = (e, type) => {
         </section>
 
         <!-- ACTIVITY LOG SECTION -->
-        <section v-if="activeSection === 'activity'" class="section-container">
-          <div class="logbook-panel">
-            <div v-if="visitorLogs.length === 0" class="empty-state">
-              <p>The logbook is empty.</p>
-              <span>Visitor registrations will appear here.</span>
+        <section v-if="activeSection === 'activity'" class="section-container logbook-section">
+          <div class="logbook-outer-container">
+            <div class="logbook-header">
+              <div class="title-area">
+                <h3>Visitor Engagement Logbook</h3>
+                <p>Real-time record of all booth registrations and resource interactions.</p>
+              </div>
+              <div class="log-actions">
+                <span class="count-badge">{{ visitorLogs.length }} Entries</span>
+              </div>
             </div>
-            
-            <div class="log-table-container">
-              <table class="log-table">
-                <thead>
-                  <tr>
-                    <th>Visitor Name</th>
-                    <th>Date</th>
-                    <th>Affiliation</th>
-                    <th>Client Type</th>
-                    <th>Items Collected</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  <tr v-for="log in visitorLogs" :key="log.submittedAt">
-                    <td><strong>{{ log.name }}</strong></td>
-                    <td>{{ formatTimestamp(log.submittedAt) }}</td>
-                    <td>{{ log.affiliations }}</td>
-                    <td>{{ log.clientType }}</td>
-                    <td>
-                      <div class="collection-tags">
-                        <span v-for="item in log.itemsCollected" :key="item" class="tag">{{ item }}</span>
-                      </div>
-                    </td>
-                  </tr>
-                </tbody>
-              </table>
+
+            <div class="logbook-panel">
+              <div v-if="visitorLogs.length === 0" class="empty-state">
+                <p>The logbook is empty.</p>
+                <span>Visitor registrations will appear here.</span>
+              </div>
+              
+              <div class="log-table-container">
+                <table class="log-table">
+                  <thead>
+                    <tr>
+                      <th>ID</th>
+                      <th>Visitor Name</th>
+                      <th>Email</th>
+                      <th>Date</th>
+                      <th>Affiliation</th>
+                      <th>Client Type</th>
+                      <th>Gender</th>
+                      <th>Address</th>
+                      <th>Items Collected</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    <tr v-for="log in visitorLogs" :key="log.id || log.submittedAt">
+                      <td><span class="id-badge">#{{ log.id }}</span></td>
+                      <td><strong>{{ log.name }}</strong></td>
+                      <td>{{ log.email }}</td>
+                      <td>{{ formatTimestamp(log.submittedAt) }}</td>
+                      <td>{{ log.affiliations }}</td>
+                      <td>{{ log.clientType }}</td>
+                      <td>{{ log.gender }}</td>
+                      <td>{{ log.address }}</td>
+                      <td>
+                        <div class="collection-tags">
+                          <span v-for="item in log.itemsCollected" :key="item" class="tag">{{ item }}</span>
+                        </div>
+                      </td>
+                    </tr>
+                  </tbody>
+                </table>
+              </div>
             </div>
           </div>
         </section>
@@ -655,6 +728,25 @@ const handleFileChange = (e, type) => {
   color: var(--primary);
 }
 
+.stat-value.mini {
+  font-size: 1.25rem;
+  color: var(--secondary);
+}
+
+.stat-main {
+  display: flex;
+  align-items: baseline;
+  gap: 0.5rem;
+  margin-top: 0.25rem;
+}
+
+.stat-unit {
+  font-size: 0.9rem;
+  font-weight: 600;
+  color: var(--text-soft);
+  text-transform: uppercase;
+}
+
 .stat-trend {
   margin-top: 0.5rem;
   font-size: 0.75rem;
@@ -668,8 +760,28 @@ const handleFileChange = (e, type) => {
   border-radius: 16px;
 }
 
+.booth-banner {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.banner-content {
+  display: flex;
+  justify-content: space-between;
+  width: 100%;
+  align-items: center;
+}
+
 .banner-text h3 { font-size: 1.5rem; margin-bottom: 0.5rem; }
 .banner-text p { opacity: 0.9; max-width: 600px; line-height: 1.6; }
+
+.decoration-img {
+  width: 120px;
+  height: 120px;
+  opacity: 0.2;
+  filter: brightness(0) invert(1);
+}
 
 /* MANAGER LAYOUT */
 .manager-layout {
@@ -824,21 +936,228 @@ const handleFileChange = (e, type) => {
   justify-content: flex-end;
 }
 
-/* LOG TABLE */
-.logbook-panel {
-  background: var(--white);
-  border-radius: 16px;
-  border: 1px solid var(--border);
-  overflow: hidden;
+/* TRIVIA MANAGEMENT */
+.trivia-management-list {
+  padding: 1.5rem;
+  display: flex;
+  flex-direction: column;
+  gap: 1.5rem;
 }
 
-.log-table-container { overflow-x: auto; }
-.log-table { width: 100%; border-collapse: collapse; text-align: left; }
-.log-table th { padding: 1rem; background: #f8fafc; font-size: 0.75rem; text-transform: uppercase; color: var(--text-soft); }
-.log-table td { padding: 1rem; border-bottom: 1px solid var(--border); font-size: 0.9rem; }
+.trivia-record-card {
+  border: 1px solid var(--border);
+  border-radius: 20px;
+  padding: 1.5rem;
+  background: #fcfdfe;
+  transition: transform 0.2s, box-shadow 0.2s;
+}
+
+.trivia-record-card:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 10px 20px rgba(0,0,0,0.04);
+}
+
+.trivia-record-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  margin-bottom: 1rem;
+}
+
+.trivia-meta-info {
+  display: flex;
+  gap: 0.75rem;
+}
+
+.difficulty-badge {
+  font-size: 0.65rem;
+  font-weight: 800;
+  padding: 4px 10px;
+  border-radius: 99px;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+
+.difficulty-badge.easy { background: #ecfdf5; color: #10b981; }
+.difficulty-badge.medium { background: #fffbeb; color: #d97706; }
+.difficulty-badge.hard { background: #fef2f2; color: #ef4444; }
+
+.category-tag {
+  font-size: 0.65rem;
+  font-weight: 700;
+  padding: 4px 10px;
+  background: #f1f5f9;
+  color: #64748b;
+  border-radius: 99px;
+  text-transform: uppercase;
+}
+
+.record-delete-btn {
+  background: none;
+  border: none;
+  font-size: 1.5rem;
+  color: #cbd5e1;
+  cursor: pointer;
+  line-height: 1;
+}
+
+.record-delete-btn:hover { color: #ef4444; }
+
+.trivia-record-body h4 {
+  font-size: 1.15rem;
+  font-weight: 700;
+  color: #1e293b;
+  margin-bottom: 1.25rem;
+  line-height: 1.4;
+}
+
+.options-preview-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  gap: 0.75rem;
+}
+
+.option-preview-item {
+  display: flex;
+  gap: 0.75rem;
+  padding: 0.75rem 1rem;
+  background: white;
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  font-size: 0.9rem;
+}
+
+.option-preview-item.is-correct-preview {
+  border-color: #10b981;
+  background: #f0fdf4;
+}
+
+.opt-id {
+  font-weight: 900;
+  color: var(--primary);
+  opacity: 0.5;
+}
+
+.is-correct-preview .opt-id { opacity: 1; color: #10b981; }
+
+.opt-val { font-weight: 600; color: #475569; }
+
+/* LOG TABLE */
+.logbook-section {
+  background: #f8fafc;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+
+.logbook-outer-container {
+  width: 100%;
+  max-width: 1400px;
+  display: flex;
+  flex-direction: column;
+  gap: 1.5rem;
+}
+
+.logbook-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-end;
+  padding: 0 1rem;
+}
+
+.title-area h3 {
+  font-size: 1.75rem;
+  font-weight: 800;
+  color: var(--primary);
+  margin-bottom: 0.25rem;
+}
+
+.title-area p {
+  color: var(--text-soft);
+  font-size: 1rem;
+}
+
+.count-badge {
+  background: var(--secondary);
+  color: white;
+  padding: 0.5rem 1.25rem;
+  border-radius: 99px;
+  font-weight: 700;
+  font-size: 0.9rem;
+  box-shadow: 0 4px 12px rgba(209, 124, 36, 0.2);
+}
+
+.logbook-panel {
+  background: var(--white);
+  border-radius: 24px;
+  border: 1px solid rgba(26, 106, 180, 0.1);
+  box-shadow: 0 20px 40px rgba(15, 23, 42, 0.08);
+  overflow: hidden;
+  padding: 1rem;
+}
+
+.log-table-container { 
+  overflow-x: auto; 
+  border-radius: 16px;
+}
+
+.log-table { 
+  width: 100%; 
+  border-collapse: separate; 
+  border-spacing: 0;
+  text-align: left; 
+}
+
+.log-table th { 
+  padding: 1.25rem 1.5rem; 
+  background: #f1f5f9; 
+  font-size: 0.8rem; 
+  text-transform: uppercase; 
+  color: var(--primary); 
+  font-weight: 800;
+  letter-spacing: 0.05em; 
+  border-bottom: 2px solid var(--border);
+}
+
+.log-table td { 
+  padding: 1.5rem; 
+  border-bottom: 1px solid var(--border); 
+  font-size: 0.95rem;
+  color: var(--text);
+  vertical-align: middle;
+}
+
+.log-table tr:hover td {
+  background: #f8fafc;
+}
+
+.log-table tr:last-child td {
+  border-bottom: none;
+}
+
+/* Specific Column Widths */
+.log-table th:nth-child(4),
+.log-table td:nth-child(4) {
+  min-width: 220px;
+}
+
+.log-table th:nth-child(2),
+.log-table td:nth-child(2) {
+  min-width: 200px;
+}
 
 .collection-tags { display: flex; flex-wrap: wrap; gap: 0.35rem; }
-.tag { background: rgba(26, 106, 180, 0.1); color: var(--primary); padding: 0.2rem 0.5rem; border-radius: 4px; font-size: 0.75rem; font-weight: 600; }
+.tag { background: rgba(26, 106, 180, 0.1); color: var(--primary); padding: 0.3rem 0.7rem; border-radius: 6px; font-size: 0.8rem; font-weight: 600; }
+
+.id-badge {
+  background: #f1f5f9;
+  color: var(--text-soft);
+  padding: 0.3rem 0.6rem;
+  border-radius: 6px;
+  font-family: monospace;
+  font-weight: 700;
+  font-size: 0.9rem;
+}
 
 /* BUTTONS */
 .btn-primary {

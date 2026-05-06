@@ -489,6 +489,133 @@ const getProgramRegistrationUrl = (program) =>
             </section>
           </template>
 
+          <!-- Specialized Bebu Game HUD Layout (Immersive Trivia) -->
+          <template v-else-if="module.id === 'bebu-game'">
+            <section class="body-section bebu-immersive-hud">
+              <div class="bebu-header-meta">
+                <div class="bebu-mission">
+                  <span class="section-label">Engagement Module</span>
+                  <h2>{{ module.title }}</h2>
+                  <p>{{ module.summary }}</p>
+                </div>
+                <div class="bebu-quick-stats">
+                  <div v-for="stat in module.quickStats" :key="stat.label" class="mini-stat">
+                    <span class="ms-lab">{{ stat.label }}</span>
+                    <span class="ms-val">{{ stat.value }}</span>
+                  </div>
+                </div>
+              </div>
+
+              <div class="premium-trivia-v2 large-hud">
+                <template v-if="triviaState.isComplete">
+                  <div class="trivia-end-screen-v2">
+                    <div class="trophy-v2">🏆</div>
+                    <h3>Session Complete</h3>
+                    <p class="score-v2">Performance: {{ Math.round((triviaState.score / triviaState.totalQuestions) * 100) }}%</p>
+                    
+                    <div v-if="triviaState.leaderboard && triviaState.leaderboard.length" class="leaderboard-v2">
+                      <h4>Top 10 Leaderboard</h4>
+                      <table class="leaderboard-table">
+                        <thead>
+                          <tr>
+                            <th>Rank</th>
+                            <th>Visitor</th>
+                            <th>Score</th>
+                            <th>Time</th>
+                          </tr>
+                        </thead>
+                        <tbody>
+                          <tr v-for="entry in triviaState.leaderboard" :key="entry.rank">
+                            <td>{{ entry.rank }}</td>
+                            <td>{{ entry.visitor }}</td>
+                            <td>{{ entry.score }}/{{ entry.total }} ({{ entry.percentage }}%)</td>
+                            <td>{{ entry.timeTaken }}</td>
+                          </tr>
+                        </tbody>
+                      </table>
+                    </div>
+
+                    <button class="prime-action-btn reset-btn" @click="$emit('trivia-reset')">Begin New Session</button>
+                  </div>
+                </template>
+
+                <template v-else-if="triviaState.question">
+                  <div class="trivia-hud-v2">
+                    <div class="hud-item-v2">
+                      <span class="hud-label-v2">Progress</span>
+                      <div class="hud-progress-v2">
+                        <div class="hud-fill-v2" :style="{ width: (triviaState.currentIndex / triviaState.totalQuestions) * 100 + '%' }"></div>
+                      </div>
+                      <span class="hud-sub-label">{{ triviaState.currentIndex }} of {{ triviaState.totalQuestions }}</span>
+                    </div>
+                    <div class="hud-item-v2 score-hud">
+                      <span class="hud-label-v2">Current Score</span>
+                      <span class="hud-val-v2">{{ triviaState.score * 100 }} <small>XP</small></span>
+                    </div>
+                  </div>
+
+                  <div class="trivia-main-stage">
+                    <div class="question-container">
+                      <span class="q-difficulty" :class="triviaState.question.difficulty?.toLowerCase()">{{ triviaState.question.difficulty }} Level</span>
+                      <p class="question-v2">{{ triviaState.question.prompt }}</p>
+                    </div>
+
+                    <div class="options-v2 grid-2x2">
+                      <button
+                        v-for="option in triviaState.question.options"
+                        :key="option.id"
+                        class="option-btn-v2"
+                        :class="{
+                          'is-correct': triviaState.hasAnswered && option.id === triviaState.question.correctOptionId,
+                          'is-incorrect': triviaState.hasAnswered && triviaState.selectedOptionId === option.id && option.id !== triviaState.question.correctOptionId
+                        }"
+                        :disabled="triviaState.hasAnswered"
+                        @click="$emit('trivia-answer', option.id)"
+                      >
+                        <span class="opt-prefix-v2">{{ option.id.toUpperCase() }}</span>
+                        <span class="opt-text-v2">{{ option.label }}</span>
+                      </button>
+                    </div>
+
+                    <Transition name="fade-up">
+                      <div v-if="triviaState.hasAnswered" class="explanation-v2 hud-style">
+                        <div class="exp-content">
+                          <strong>{{ triviaState.question.correctOptionId.toUpperCase() === triviaState.selectedOptionId.toUpperCase() ? '✓ Correct Answer!' : '× Knowledge Check' }}</strong>
+                          <p>{{ triviaState.question.explanation }}</p>
+                        </div>
+                        <button class="prime-action-btn next-v2" @click="$emit('trivia-next')">Next Question ➔</button>
+                      </div>
+                    </Transition>
+                  </div>
+                </template>
+
+                <div v-else-if="triviaState.isLoading" class="bebu-loading">
+                  <div class="spinner"></div>
+                  <p>Initializing your knowledge session...</p>
+                </div>
+
+                <div v-else-if="triviaState.error" class="bebu-start-screen">
+                  <div class="bebu-error">
+                    <p>⚠️ {{ triviaState.error }}</p>
+                  </div>
+                  <button class="prime-action-btn" @click="$emit('trivia-reset')">
+                    Retry Connection
+                  </button>
+                </div>
+              </div>
+
+              <!-- Benefits section at the bottom -->
+              <div class="bebu-footer-benefits">
+                <h3 class="mini-label">Core Learning Benefits</h3>
+                <div class="benefits-grid">
+                  <div v-for="point in module.highlights" :key="point" class="benefit-tag">
+                    <span class="check">✓</span> {{ point }}
+                  </div>
+                </div>
+              </div>
+            </section>
+          </template>
+
           <!-- Standard Main Content Section -->
           <div v-else class="main-layout">
             <!-- Left Side: Narrative & Strategy -->
@@ -1805,6 +1932,123 @@ const getProgramRegistrationUrl = (program) =>
 .fade-fast-enter-from,
 .fade-fast-leave-to {
   opacity: 0;
+}
+
+/* Slide transition */
+.fade-fast-enter-active,
+.fade-fast-leave-active {
+  transition: opacity 0.2s ease;
+}
+.fade-fast-enter-from,
+.fade-fast-leave-to {
+  opacity: 0;
+}
+
+/* 9. Bebu Immersive HUD Styles */
+.bebu-immersive-hud {
+  padding: 1rem 1rem !important;
+  display: flex;
+  flex-direction: column;
+  gap: 2rem;
+  min-height: 100%;
+}
+
+.bebu-header-meta {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  background: white;
+  padding: 1.5rem 2rem;
+  border-radius: 24px;
+  border: 1px solid #e2e8f0;
+  box-shadow: 0 10px 30px rgba(0,0,0,0.04);
+}
+
+.bebu-mission h2 { font-size: 1.8rem; font-weight: 900; color: #1a6ab4; margin-top: 0.25rem; }
+.bebu-mission p { color: #64748b; font-size: 0.95rem; margin-top: 0.25rem; }
+
+.bebu-quick-stats { display: flex; gap: 1rem; }
+.mini-stat {
+  background: #f8fafc;
+  padding: 0.75rem 1.25rem;
+  border-radius: 16px;
+  display: flex;
+  flex-direction: column;
+  min-width: 140px;
+}
+.ms-lab { font-size: 0.65rem; font-weight: 800; color: #94a3b8; text-transform: uppercase; }
+.ms-val { font-size: 1rem; font-weight: 800; color: #1a6ab4; }
+
+.large-hud {
+  background: white !important;
+  border-radius: 32px !important;
+  box-shadow: 0 30px 60px rgba(15, 23, 42, 0.1) !important;
+  min-height: 550px;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+}
+
+.trivia-main-stage {
+  max-width: 900px;
+  margin: 0 auto;
+  width: 100%;
+}
+
+.question-container { text-align: center; margin-bottom: 3rem; }
+.q-difficulty { 
+  display: inline-block; 
+  padding: 4px 12px; 
+  border-radius: 99px; 
+  font-size: 0.7rem; 
+  font-weight: 800; 
+  text-transform: uppercase; 
+  margin-bottom: 1rem; 
+}
+.q-difficulty.easy { background: #ecfdf5; color: #10b981; }
+.q-difficulty.medium { background: #fffbeb; color: #d97706; }
+.q-difficulty.hard { background: #fef2f2; color: #ef4444; }
+
+.grid-2x2 {
+  display: grid !important;
+  grid-template-columns: 1fr 1fr;
+  gap: 1.25rem !important;
+}
+
+.score-hud { text-align: right; }
+.hud-sub-label { font-size: 0.75rem; color: #94a3b8; font-weight: 700; margin-top: 4px; display: block; }
+
+.explanation-v2.hud-style {
+  background: #1e293b;
+  color: white;
+  margin-top: 3rem;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 2rem;
+  border-radius: 20px;
+  border-left: 6px solid #d17c24;
+}
+
+.exp-content strong { font-size: 1.1rem; color: #d17c24; display: block; margin-bottom: 0.25rem; }
+.exp-content p { opacity: 0.9; font-size: 1rem; }
+.next-v2 { width: auto !important; padding: 1rem 2.5rem !important; }
+
+.bebu-footer-benefits {
+  margin-top: auto;
+  padding: 1.5rem 2rem;
+}
+.mini-label { font-size: 0.8rem; font-weight: 800; color: #94a3b8; text-transform: uppercase; margin-bottom: 1rem; }
+
+.bebu-loading { text-align: center; }
+.spinner { width: 40px; height: 40px; border: 4px solid #f1f5f9; border-top: 4px solid #1a6ab4; border-radius: 50%; animation: spin 1s linear infinite; margin: 0 auto 1rem; }
+@keyframes spin { to { transform: rotate(360deg); } }
+
+.reset-btn { width: auto !important; padding-left: 3rem !important; padding-right: 3rem !important; }
+
+@media (max-width: 768px) {
+  .grid-2x2 { grid-template-columns: 1fr; }
+  .bebu-header-meta { flex-direction: column; gap: 1rem; }
 }
 
 @media (max-width: 768px) {
