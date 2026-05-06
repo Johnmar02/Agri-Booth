@@ -1,4 +1,5 @@
 <script setup>
+import { onMounted } from "vue";
 import { useRouter } from "vue-router";
 import { useAdminController } from "@/controllers/useAdminController";
 import { useContentStore } from "@/stores/contentStore";
@@ -7,6 +8,13 @@ import AdminDashboardView from "@/views/AdminDashboardView.vue";
 const router = useRouter();
 const admin = useAdminController();
 const contentStore = useContentStore();
+
+onMounted(async () => {
+  await Promise.all([
+    contentStore.fetchBebuQuestions(),
+    contentStore.fetchStats()
+  ]);
+});
 
 const handleLogout = () => {
   admin.logout();

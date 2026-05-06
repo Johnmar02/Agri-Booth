@@ -1,59 +1,239 @@
 /**
  * SERVICE: apiClient.js
  * 
- * This service handles all "network" communication.
- * It is purely client-side and uses local storage to simulate a backend.
+ * This service handles all network communication with the .NET backend.
+ * It uses the 'credentials: include' flag to support cookie-based authentication.
  */
+
+const BASE_URL = import.meta.env.VITE_API_BASE_URL;
+
+function buildUrl(endpoint) {
+  return `${BASE_URL.replace(/\/$/, '')}/${endpoint.replace(/^\//, '')}`;
+}
 
 /**
- * MOCK UTILS
+ * UTILS: Generic fetch wrapper to handle JSON and errors.
  */
-const EXPECTED_ADMIN_HASH = '365471a4f330fb32085510444abe4af77c2c7ca4b5518de500e05ad2018d7711';
+async function request(endpoint, options = {}) {
+  const url = buildUrl(endpoint);
+  try {
+    const response = await fetch(url, {
+      ...options,
+      headers: {
+        'Content-Type': 'application/json',
+        ...options.headers,
+      },
+      credentials: 'include',
+    });
 
-async function digestMessage(message) {
-  const msgUint8 = new TextEncoder().encode(message);
-  const hashBuffer = await crypto.subtle.digest('SHA-256', msgUint8);
-  const hashArray = Array.from(new Uint8Array(hashBuffer));
-  return hashArray.map((b) => b.toString(16).padStart(2, '0')).join('');
+    // Check if the response actually contains JSON
+    const contentType = response.headers.get('content-type');
+    let data = {};
+    if (contentType && contentType.includes('application/json')) {
+      data = await response.json();
+    } else {
+      // If it's not JSON (like a 404 HTML page), just get the text or keep data empty
+      const text = await response.text();
+      data = { message: text || `Error ${response.status}` };
+    }
+
+    return { ...data, _status: response.status, ok: response.ok };
+  } catch (error) {
+    console.error(`API Error (${endpoint}):`, error);
+    return { ok: false, message: 'Connection error. Please try again later.' };
+  }
 }
 
 export const apiClient = {
   /**
-   * Authenticates an admin login attempt.
+   * AuthController: Authenticates an admin login attempt using Cookies.
    */
-  async loginAdmin(password) {
-    // Mock Logic
-    const inputHash = await digestMessage(password);
-    if (inputHash === EXPECTED_ADMIN_HASH) {
-      const mockToken = btoa(JSON.stringify({ role: 'admin', exp: Date.now() + 1800000 }));
-      return { ok: true, token: mockToken };
-    }
-    return { ok: false, message: 'Invalid administrative key.' };
+  async loginAdmin(username, password) {
+    return await request('/Auth/login', {
+      method: 'POST',
+      body: JSON.stringify({ Username: username, Password: password }),
+    });
   },
 
   /**
-   * Submits visitor logbook data.
+   * AuthController: Logs out the admin and clears the server-side cookie.
+   */
+  async logoutAdmin() {
+    return await request('/Auth/logout', {
+      method: 'POST',
+    });
+  },
+
+  /**
+   * VisitorsController: Authenticates a visitor login attempt.
+   */
+  async loginVisitor(email, password) {
+    return await request('/Visitors/login', {
+      method: 'POST',
+      body: JSON.stringify({ Email: email, Password: password }),
+    });
+  },
+
+  /**
+   * VisitorsController: Logs out a visitor.
+   */
+  async logoutVisitor() {
+    return await request('/Visitors/logout', {
+      method: 'POST',
+    });
+  },
+
+  /**
+   * VisitorsController: Submits visitor registration (logbook) data.
    */
   async submitLogbook(payload) {
-    // Artificial delay to simulate network latency
-    await new Promise(r => setTimeout(r, 800));
-    return { ok: true, id: `v-${Date.now()}` };
+    // Mapping frontend model to .NET CreateVisitorDto
+    const mappedPayload = {
+      FullName: payload.name,
+      Email: payload.email,
+      Password: payload.password || '', 
+      Address: payload.address,
+      Affiliation: payload.affiliations,
+      Gender: payload.gender,
+      ClientType: payload.clientType,
+    };
+
+    return await request('/Visitors/register', {
+      method: 'POST',
+      body: JSON.stringify(mappedPayload),
+    });
   },
 
   /**
-   * Admin: adds a new training resource
+   * VisitorsController: Updates visitor profile data.
    */
-  async addResource(moduleId, resource) {
-    // Artificial delay to simulate file upload
-    await new Promise(r => setTimeout(r, 1500));
-    return { ok: true, id: `r-${Date.now()}` };
+  async updateVisitor(visitorId, payload) {
+    const mappedPayload = {
+      FullName: payload.name,
+      Email: payload.email,
+      Password: payload.password || '',
+      Address: payload.address,
+      Affiliation: payload.affiliations,
+      Gender: payload.gender,
+      ClientType: payload.clientType,
+    };
+
+    return await request(`/Visitors/${visitorId}`, {
+      method: 'PUT',
+      body: JSON.stringify(mappedPayload),
+    });
   },
 
   /**
-   * Admin: deletes a resource
+   * VisitorsController: Fetches all visitors (Admin only).
    */
-  async deleteResource(moduleId, resourceId) {
-    await new Promise(r => setTimeout(r, 300));
-    return { ok: true };
+  async getVisitors() {
+    return await request('/Visitors');
+  },
+
+  /**
+   * IECMaterialsController: Fetches all IEC materials.
+   */
+  async getIECMaterials() {
+    return await request('/IECMaterials');
+  },
+
+  /**
+   * TrainingProgramsController: Fetches training programs.
+   */
+  async getTrainingPrograms() {
+    return await request('/TrainingPrograms');
+  },
+
+  /**
+   * CoursesController: Fetches LMS courses.
+   */
+  async getCourses() {
+    return await request('/Courses');
+  },
+
+  /**
+   * FeedbacksController: Submits user feedback.
+   */
+  async submitFeedback(payload) {
+    return await request('/Feedbacks', {
+      method: 'POST',
+      body: JSON.stringify(payload),
+    });
+  },
+
+  /**
+   * AnalyticsController: Fetches booth statistics.
+   */
+  async getStats() {
+    return await request('/Analytics/Summary');
+  },
+
+  /**
+   * BebuGameController: Admin creates a trivia question.
+   */
+  async createBebuQuestion(payload) {
+    return await request('/BebuGame/questions', {
+      method: 'POST',
+      body: JSON.stringify(payload),
+    });
+  },
+
+  /**
+   * BebuGameController: Admin fetches all trivia questions.
+   */
+  async getBebuQuestions() {
+    return await request('/BebuGame/questions/all');
+  },
+
+  /**
+   * BebuGameController: Admin deactivates a trivia question.
+   */
+  async deleteBebuQuestion(questionId) {
+    return await request(`/BebuGame/questions/${questionId}`, {
+      method: 'DELETE',
+    });
+  },
+
+  /**
+   * BebuGameController: Visitor starts a game session.
+   */
+  async startGameSession(visitorId, questionCount = 10) {
+    return await request(`/BebuGame/start?visitorId=${visitorId}&questionCount=${questionCount}`, {
+      method: 'POST',
+    });
+  },
+
+  /**
+   * BebuGameController: Visitor submits an answer.
+   */
+  async submitAnswer(payload) {
+    return await request('/BebuGame/submit', {
+      method: 'POST',
+      body: JSON.stringify(payload),
+    });
+  },
+
+  /**
+   * BebuGameController: Visitor finishes the game.
+   */
+  async finishGame(sessionId) {
+    return await request(`/BebuGame/finish/${sessionId}`, {
+      method: 'POST',
+    });
+  },
+
+  /**
+   * BebuGameController: Fetches the leaderboard.
+   */
+  async getLeaderboard() {
+    return await request('/BebuGame/leaderboard');
+  },
+
+  /**
+   * BebuGameController: Fetches a visitor's game history.
+   */
+  async getGameHistory(visitorId) {
+    return await request(`/BebuGame/history/${visitorId}`);
   }
 };

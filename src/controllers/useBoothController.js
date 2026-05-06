@@ -1,5 +1,6 @@
 import { computed, reactive, ref, watch } from 'vue';
 import { useContentStore } from '@/stores/contentStore';
+import { useBebuGameStore } from '@/stores/bebuGame';
 import {
   AGRI_BOOTH_BRAND,
   getAdvisoryResponseLibrary,
@@ -24,8 +25,9 @@ import { useLogbookController } from '@/controllers/useLogbookController';
  * bridge where access policy, state transitions, and mock behavior are enforced.
  */
 
-const ACCESS_SESSION_KEY = 'itcph-bebooth-access';
 const TRACKED_RESOURCES_SESSION_KEY = 'itcph-bebooth-tracked-resources';
+const VISITOR_SESSION_KEY = 'itcph-bebooth-visitor-session';
+const INACTIVITY_TIMEOUT_MS = 10 * 60 * 1000; // 10 minutes
 
 /**
  * Safely parses JSON from session storage and falls back when storage is unavailable.
@@ -173,6 +175,7 @@ function getCalculatorResults(inputs) {
 
 export function useBoothController() {
   const contentStore = useContentStore();
+  const bebuStore = useBebuGameStore();
   
   const outcomeMetrics = computed(() => contentStore.outcomes);
   // Modules and Hotspots are now reactive from the store
@@ -180,7 +183,6 @@ export function useBoothController() {
   const hotspotCatalog = getHotspotLayout(); // Layout (coordinates) remains static
   
   const responseLibrary = getAdvisoryResponseLibrary();
-  const triviaDeck = getTriviaDeck();
   const calculatorFields = getCalculatorFieldDefinitions();
   const calculatorFieldMap = new Map(calculatorFields.map((field) => [field.id, field]));
   
@@ -189,32 +191,84 @@ export function useBoothController() {
   const hotspotMap = new Map(hotspotCatalog.map((hotspot) => [hotspot.id, hotspot]));
 
   const activeModuleId = ref(null);
-  const isLogbookOpen = ref(false);
+  const isLogbookOpen = ref(false); // Closed on start; pops up when hotspot is clicked without registration
+  const isProfileMode = ref(false);
   const pendingModuleId = ref(null);
 
   const initialTrackedResources = readSessionJson(TRACKED_RESOURCES_SESSION_KEY, []);
   const trackedResourceIds = ref(Array.isArray(initialTrackedResources) ? initialTrackedResources : []);
 
   /**
-   * CONTROLLER STATE: Only a minimal access snapshot is persisted across refreshes.
-   * Visitor identity stays in memory only to reduce exposure of personal data in the browser.
+   * CONTROLLER STATE: Visitor identity is NOW persisted across reloads.
    */
-  const visitorSession = reactive({
-    isRegistered: Boolean(readSessionJson(ACCESS_SESSION_KEY, false)),
+  const initialVisitorSession = readSessionJson(VISITOR_SESSION_KEY, {
+    isRegistered: false,
     displayName: '',
+    visitorId: null,
+    profile: {}
   });
+
+  const visitorSession = reactive(initialVisitorSession);
+
+  watch(
+    visitorSession,
+    (newSession) => {
+      writeSessionJson(VISITOR_SESSION_KEY, newSession);
+    },
+    { deep: true }
+  );
+
+  const inactivityTimer = ref(null);
+
+  const logoutVisitor = () => {
+    visitorSession.isRegistered = false;
+    visitorSession.displayName = '';
+    visitorSession.visitorId = null;
+    visitorSession.profile = {};
+
+    isLogbookOpen.value = false;
+    isProfileMode.value = false;
+    activeModuleId.value = null;
+    pendingModuleId.value = null;
+
+    // Reset tracked resources for a fresh session
+    trackedResourceIds.value = [];
+    writeSessionJson(TRACKED_RESOURCES_SESSION_KEY, []);
+    writeSessionJson(VISITOR_SESSION_KEY, visitorSession);
+
+    if (inactivityTimer.value) {
+      clearTimeout(inactivityTimer.value);
+    }
+  };
+
+  const resetInactivityTimer = () => {
+    if (inactivityTimer.value) {
+      clearTimeout(inactivityTimer.value);
+    }
+    
+    if (visitorSession.isRegistered) {
+      inactivityTimer.value = setTimeout(() => {
+        logoutVisitor();
+      }, INACTIVITY_TIMEOUT_MS);
+    }
+  };
+
+  // Set up inactivity listeners
+  if (typeof window !== 'undefined') {
+    const events = ['mousemove', 'keydown', 'click', 'touchstart', 'scroll'];
+    events.forEach(event => {
+      window.addEventListener(event, resetInactivityTimer, { passive: true });
+    });
+    
+    // Start timer immediately if already registered from a persisted session
+    if (visitorSession.isRegistered) {
+      resetInactivityTimer();
+    }
+  }
 
   const advisoryMessages = ref(getAdvisorySeedMessages());
   const advisoryDraft = ref('');
   const advisoryIsBusy = ref(false);
-
-  const triviaStateInternal = reactive({
-    currentIndex: 0,
-    selectedOptionId: '',
-    hasAnswered: false,
-    score: 0,
-    isComplete: false,
-  });
 
   const calculatorInputs = reactive(getCalculatorDefaults());
 
@@ -223,20 +277,9 @@ export function useBoothController() {
   });
 
   /**
-   * Persists the minimal access flag and tracked resources after state changes.
-   *
-   * WHY THIS EXISTS:
-   * Session continuity improves kiosk usability, but persisting only non-sensitive data
-   * avoids storing names, addresses, or emails in browser storage.
+   * Persists the tracked resources after state changes.
+   * Visitor registration is now intentionally volatile (lost on reload).
    */
-  watch(
-    () => visitorSession.isRegistered,
-    (isRegistered) => {
-      writeSessionJson(ACCESS_SESSION_KEY, isRegistered);
-    },
-    { immediate: true },
-  );
-
   watch(
     trackedResourceIds,
     (resourceIds) => {
@@ -322,13 +365,17 @@ export function useBoothController() {
    * Trivia state prepared for the Bebu module view.
    */
   const triviaState = computed(() => ({
-    question: triviaDeck[triviaStateInternal.currentIndex] ?? null,
-    currentIndex: triviaStateInternal.currentIndex + 1,
-    totalQuestions: triviaDeck.length,
-    selectedOptionId: triviaStateInternal.selectedOptionId,
-    hasAnswered: triviaStateInternal.hasAnswered,
-    score: triviaStateInternal.score,
-    isComplete: triviaStateInternal.isComplete,
+    question: bebuStore.currentQuestion,
+    currentIndex: bebuStore.currentQuestionIndex + 1,
+    totalQuestions: bebuStore.questions.length || 10,
+    selectedOptionId: bebuStore.selectedOptionId,
+    hasAnswered: bebuStore.hasAnswered,
+    score: bebuStore.score,
+    isComplete: bebuStore.isGameOver,
+    isLoading: bebuStore.isLoading,
+    error: bebuStore.error,
+    leaderboard: bebuStore.leaderboard,
+    history: bebuStore.history
   }));
 
   /**
@@ -366,6 +413,11 @@ export function useBoothController() {
     }
 
     activeModuleId.value = module.id;
+
+    // Trigger game start if bebu-game is opened and not started
+    if (moduleId === 'bebu-game' && !bebuStore.currentSessionId) {
+      bebuStore.startGame();
+    }
   };
 
   /**
@@ -411,6 +463,7 @@ export function useBoothController() {
    */
   const closeLogbook = () => {
     isLogbookOpen.value = false;
+    isProfileMode.value = false;
     pendingModuleId.value = null;
   };
 
@@ -445,10 +498,67 @@ export function useBoothController() {
   };
 
   /**
+   * Opens the profile editor for the current visitor.
+   */
+  const openProfile = () => {
+    if (!visitorSession.isRegistered) return;
+    
+    logbook.fillForm({
+      name: visitorSession.displayName,
+      ...visitorSession.profile
+    });
+    
+    isProfileMode.value = true;
+    isLogbookOpen.value = true;
+    activeModuleId.value = null;
+  };
+
+  /**
+   * Authenticates a returning visitor and unlocks gated modules.
+   */
+  const loginLogbook = async () => {
+    const result = await logbook.login();
+
+    if (!result.ok || !result.payload) {
+      return;
+    }
+
+    visitorSession.isRegistered = true;
+    visitorSession.displayName = result.payload.name;
+    visitorSession.visitorId = result.payload.visitorId || result.payload.id;
+    visitorSession.profile = result.payload;
+
+    isLogbookOpen.value = false;
+    resetInactivityTimer();
+
+    const requestedModuleId = pendingModuleId.value;
+    pendingModuleId.value = null;
+
+    logbook.resetForm();
+
+    if (requestedModuleId) {
+      selectModule(requestedModuleId);
+    }
+  };
+
+  /**
    * Completes the mock registration flow, unlocks gated modules for the current browser
    * session, and returns the visitor to the module that originally required access.
    */
   const submitLogbook = async () => {
+    // Check if we are in profile mode
+    if (isProfileMode.value) {
+      const result = await logbook.updateProfile(visitorSession.visitorId);
+      if (result.ok && result.payload) {
+        visitorSession.displayName = result.payload.name;
+        visitorSession.profile = result.payload;
+        isLogbookOpen.value = false;
+        isProfileMode.value = false;
+        logbook.resetForm();
+      }
+      return;
+    }
+
     const result = await logbook.submit();
 
     if (!result.ok || !result.payload) {
@@ -457,7 +567,11 @@ export function useBoothController() {
 
     visitorSession.isRegistered = true;
     visitorSession.displayName = result.payload.name;
+    visitorSession.visitorId = result.payload.visitorId || result.payload.id;
+    visitorSession.profile = result.payload;
+
     isLogbookOpen.value = false;
+    resetInactivityTimer();
 
     const requestedModuleId = pendingModuleId.value;
     pendingModuleId.value = null;
@@ -531,18 +645,7 @@ export function useBoothController() {
    * @param {string} optionId
    */
   const answerTrivia = (optionId) => {
-    const question = triviaDeck[triviaStateInternal.currentIndex];
-
-    if (!question || triviaStateInternal.hasAnswered || triviaStateInternal.isComplete) {
-      return;
-    }
-
-    triviaStateInternal.selectedOptionId = optionId;
-    triviaStateInternal.hasAnswered = true;
-
-    if (optionId === question.correctOptionId) {
-      triviaStateInternal.score += 1;
-    }
+    bebuStore.submitAnswer(optionId);
   };
 
   /**
@@ -550,29 +653,14 @@ export function useBoothController() {
    * reaches the end of the deck.
    */
   const advanceTrivia = () => {
-    if (!triviaStateInternal.hasAnswered) {
-      return;
-    }
-
-    if (triviaStateInternal.currentIndex >= triviaDeck.length - 1) {
-      triviaStateInternal.isComplete = true;
-      return;
-    }
-
-    triviaStateInternal.currentIndex += 1;
-    triviaStateInternal.selectedOptionId = '';
-    triviaStateInternal.hasAnswered = false;
+    bebuStore.nextQuestion();
   };
 
   /**
    * Resets the trivia round so the public engagement module can be replayed at events.
    */
   const resetTrivia = () => {
-    triviaStateInternal.currentIndex = 0;
-    triviaStateInternal.selectedOptionId = '';
-    triviaStateInternal.hasAnswered = false;
-    triviaStateInternal.score = 0;
-    triviaStateInternal.isComplete = false;
+    bebuStore.startGame();
   };
 
   /**
@@ -601,6 +689,7 @@ export function useBoothController() {
     trackedResourceIds,
     visitorStatus,
     isLogbookOpen,
+    isProfileMode,
     pendingModuleTitle,
     logbookForm: logbook.form,
     logbookErrors: logbook.errors,
@@ -616,7 +705,11 @@ export function useBoothController() {
     closeLogbook,
     trackResource,
     updateLogbookField,
+    loginLogbook,
     submitLogbook,
+    openProfile,
+    logoutVisitor,
+    visitorSession,
     updateChatDraft,
     submitChatMessage,
     answerTrivia,

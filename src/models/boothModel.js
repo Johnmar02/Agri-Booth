@@ -683,7 +683,7 @@ Moreover, Gil advocates the importance of continuous learning. Farmers must dedi
         description:
           'A concise profile of the center mission, facilities, service areas, and training mandate for visitors who need an immediate institutional snapshot.',
         actionLabel: 'View publication',
-        href: 'https://www.atiitcph.com/materials',
+        href: 'https://www.atiitcph.com/',
         accent: '#1a6ab4',
       },
       {
@@ -705,7 +705,7 @@ Moreover, Gil advocates the importance of continuous learning. Farmers must dedi
         description:
           'Highlights annual milestones, extension reach, capability-building outputs, and partnership work across the center\'s swine-development programs.',
         actionLabel: 'View report',
-        href: 'https://www.atiitcph.com/materials',
+        href: 'https://www.atiitcph.com/annual-reports',
         accent: '#a55c1b',
       },
       {

@@ -14,7 +14,7 @@ defineProps({
   }
 });
 
-defineEmits(['close', 'update-key', 'submit']);
+defineEmits(['close', 'update-username', 'update-password', 'submit']);
 </script>
 
 <template>
@@ -29,14 +29,25 @@ defineEmits(['close', 'update-key', 'submit']);
 
         <form @submit.prevent="$emit('submit')" class="admin-login__form">
           <div class="input-group">
-            <label for="admin-key">Administrative Key</label>
+            <label for="admin-username">Username</label>
             <input 
-              id="admin-key"
+              id="admin-username"
+              type="text" 
+              placeholder="Admin Username"
+              :value="form.username"
+              @input="$emit('update-username', $event.target.value)"
+              autofocus
+            />
+          </div>
+
+          <div class="input-group">
+            <label for="admin-password">Password</label>
+            <input 
+              id="admin-password"
               type="password" 
               placeholder="••••••••••••"
-              :value="form.key"
-              @input="$emit('update-key', $event.target.value)"
-              autofocus
+              :value="form.password"
+              @input="$emit('update-password', $event.target.value)"
             />
             <Transition name="shake">
               <p v-if="form.error" class="error-text">{{ form.error }}</p>

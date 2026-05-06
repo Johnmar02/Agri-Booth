@@ -3,6 +3,9 @@ import { useAdminController } from '@/controllers/useAdminController';
 import BoothView from '@/views/BoothView.vue';
 import AdminLoginView from '@/views/AdminLoginView.vue';
 import AdminRouteView from '@/views/AdminRouteView.vue';
+import VisitorAuthView from '@/views/VisitorAuthView.vue';
+
+import { useVisitorStore } from '@/stores/visitor';
 
 const routes = [
   {
@@ -35,6 +38,7 @@ const router = createRouter({
 router.beforeEach((to, from, next) => {
   const admin = useAdminController();
 
+  // Admin Guards
   if (to.meta.requiresAuth && !admin.isAuthenticated.value) {
     next({ name: 'AdminLogin', query: { redirect: to.fullPath } });
     return;

@@ -27,6 +27,10 @@ const handleLogbookSubmit = async () => {
   }
 };
 
+const handleLogbookLogin = async () => {
+  await booth.loginLogbook();
+};
+
 const handle3DClick = ({ id, object }) => {
   if (booth.isLogbookOpen.value) {
     return;
@@ -54,6 +58,10 @@ const closePanel = () => {
 const openAdminLogin = () => {
   router.push({ name: 'AdminLogin' });
 };
+
+const handleLogout = () => {
+  booth.logoutVisitor();
+};
 </script>
 
 <template>
@@ -65,13 +73,23 @@ const openAdminLogin = () => {
     />
 
     <div id="overlay-ui">
+      <div v-if="booth.visitorSession.isRegistered" class="visitor-top-actions">
+        <span class="visitor-name">Welcome, {{ booth.visitorSession.displayName }}</span>
+        <button class="profile-btn" @click="booth.openProfile">Manage Profile</button>
+        <button class="logout-btn" @click="handleLogout">Logout</button>
+      </div>
+
       <RegistrationPortal
         v-if="booth.isLogbookOpen.value"
         :form="booth.logbookForm"
+        :field-options="booth.logbookFieldOptions"
         :errors="booth.logbookErrors"
         :is-submitting="booth.isLogbookSubmitting.value"
+        :is-registered="booth.visitorStatus.value.accessLabel.includes('unlocked') || booth.visitorStatus.value.accessLabel === 'Restricted modules unlocked'"
+        :is-profile-mode="booth.isProfileMode.value"
         @update-field="booth.updateLogbookField"
         @submit="handleLogbookSubmit"
+        @login="handleLogbookLogin"
         @close="closePanel"
       />
 
@@ -191,6 +209,62 @@ const openAdminLogin = () => {
 
 .admin-corner-btn:active {
   transform: translateY(0);
+}
+
+.visitor-top-actions {
+  position: fixed;
+  top: 1.5rem;
+  right: 1.5rem;
+  z-index: 100;
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  padding: 0.6rem 1.2rem;
+  background: rgba(255, 255, 255, 0.95);
+  border-radius: 99px;
+  border: 1px solid rgba(26, 106, 180, 0.15);
+  box-shadow: 0 10px 25px rgba(0, 0, 0, 0.08);
+  backdrop-filter: blur(8px);
+}
+
+.visitor-name {
+  font-weight: 700;
+  font-size: 0.9rem;
+  color: #1a6ab4;
+}
+
+.profile-btn {
+  background: #f1f5f9;
+  color: #1a6ab4;
+  border: 1px solid rgba(26, 106, 180, 0.2);
+  padding: 0.4rem 1rem;
+  border-radius: 99px;
+  font-weight: 700;
+  font-size: 0.8rem;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.profile-btn:hover {
+  background: #e2e8f0;
+  border-color: #1a6ab4;
+}
+
+.logout-btn {
+  background: #d17c24;
+  color: white;
+  border: none;
+  padding: 0.4rem 1rem;
+  border-radius: 99px;
+  font-weight: 700;
+  font-size: 0.8rem;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.logout-btn:hover {
+  background: #b56a1d;
+  transform: translateY(-1px);
 }
 
 /* Animations */

@@ -16,7 +16,8 @@ const getContentStore = () => {
 
 const isAuthenticated = ref(false);
 const loginForm = reactive({
-  key: '',
+  username: '',
+  password: '',
   error: ''
 });
 const isAddingResource = ref(false);
@@ -26,23 +27,40 @@ const resourceDraft = reactive({
   format: 'PDF Document',
   status: 'Ready',
   file: null,
-  imageFile: null
+  imageFile: null,
+  question: '',
+  optionA: '',
+  optionB: '',
+  optionC: '',
+  optionD: '',
+  correctOptionId: 'a'
 });
 const uploadProgress = ref(0);
 let autoLogoutTimer = null;
 
-function parseAdminToken(token) {
-  if (!token) return null;
+function readAdminSession() {
+  const rawSession = window.localStorage.getItem(ADMIN_TOKEN_KEY);
+  if (!rawSession) return null;
+
   try {
-    return JSON.parse(atob(token));
+    return JSON.parse(rawSession);
   } catch (error) {
     return null;
   }
 }
 
-function isTokenValid(token) {
-  const payload = parseAdminToken(token);
-  return payload?.role === 'admin' && payload.exp && payload.exp > Date.now();
+function writeAdminSession() {
+  window.localStorage.setItem(
+    ADMIN_TOKEN_KEY,
+    JSON.stringify({
+      role: 'admin',
+      exp: Date.now() + SESSION_TIMEOUT_MS
+    })
+  );
+}
+
+function isSessionValid(session) {
+  return session?.role === 'admin' && session.exp && session.exp > Date.now();
 }
 
 function clearAutoLogoutTimer() {
@@ -56,33 +74,39 @@ function scheduleAutoLogout() {
   clearAutoLogoutTimer();
   if (!isAuthenticated.value) return;
   autoLogoutTimer = window.setTimeout(() => {
-    logout();
+    clearAdminSession();
   }, SESSION_TIMEOUT_MS);
 }
 
 function refreshAdminSession() {
   if (!isAuthenticated.value) return;
-  const token = window.localStorage.getItem(ADMIN_TOKEN_KEY);
-  if (!isTokenValid(token)) {
-    logout();
+  const session = readAdminSession();
+  if (!isSessionValid(session)) {
+    clearAdminSession();
     return;
   }
 
-  const payload = parseAdminToken(token);
-  payload.exp = Date.now() + SESSION_TIMEOUT_MS;
-  window.localStorage.setItem(ADMIN_TOKEN_KEY, btoa(JSON.stringify(payload)));
+  writeAdminSession();
   scheduleAutoLogout();
 }
 
 function restoreAdminSession() {
-  const token = window.localStorage.getItem(ADMIN_TOKEN_KEY);
-  if (isTokenValid(token)) {
+  const session = readAdminSession();
+  if (isSessionValid(session)) {
     isAuthenticated.value = true;
     scheduleAutoLogout();
+    
+    // We can't easily call fetch methods here because they are inside useAdminController
+    // But we can use the store directly if needed, or let the view call them.
   } else {
-    window.localStorage.removeItem(ADMIN_TOKEN_KEY);
-    isAuthenticated.value = false;
+    clearAdminSession();
   }
+}
+
+function clearAdminSession() {
+  isAuthenticated.value = false;
+  window.localStorage.removeItem(ADMIN_TOKEN_KEY);
+  clearAutoLogoutTimer();
 }
 
 function activityWatcher() {
@@ -105,17 +129,15 @@ if (typeof window !== 'undefined') {
 export function useAdminController() {
   const login = async () => {
     loginForm.error = '';
-    
-    const result = await apiClient.loginAdmin(loginForm.key);
+    const result = await apiClient.loginAdmin(loginForm.username, loginForm.password);
     
     if (result.ok) {
       isAuthenticated.value = true;
-      
-      if (result.token) {
-        window.localStorage.setItem(ADMIN_TOKEN_KEY, result.token);
-      }
-
+      writeAdminSession();
       scheduleAutoLogout();
+      // Fetch initial data
+      await fetchStats();
+      await fetchLogs();
       return true;
     }
 
@@ -123,12 +145,29 @@ export function useAdminController() {
     return false;
   };
 
-  const logout = () => {
+  const logout = async () => {
+    try {
+      // Clear cookie on server
+      await apiClient.logoutAdmin?.();
+    } catch (e) {
+      // Continue with local logout
+    }
     isAuthenticated.value = false;
-    loginForm.key = '';
-    loginForm.error = '';
     window.localStorage.removeItem(ADMIN_TOKEN_KEY);
+    loginForm.username = '';
+    loginForm.password = '';
+    loginForm.error = '';
     clearAutoLogoutTimer();
+  };
+
+  const fetchStats = async () => {
+    const store = getContentStore();
+    await store.fetchStats();
+  };
+
+  const fetchLogs = async () => {
+    const store = getContentStore();
+    await store.fetchVisitors();
   };
 
   const startAddResource = () => {
@@ -137,11 +176,27 @@ export function useAdminController() {
     resourceDraft.format = 'PDF Document';
     resourceDraft.file = null;
     resourceDraft.imageFile = null;
+    resourceDraft.question = '';
+    resourceDraft.optionA = '';
+    resourceDraft.optionB = '';
+    resourceDraft.optionC = '';
+    resourceDraft.optionD = '';
+    resourceDraft.correctOptionId = 'a';
     isAddingResource.value = true;
   };
 
   const commitResource = async (moduleId) => {
-    if (!resourceDraft.title || !resourceDraft.description) return;
+    const isBebuQuestion = moduleId === 'bebu-game';
+    const trimmedQuestion = resourceDraft.question.trim();
+    const options = [
+      resourceDraft.optionA.trim(),
+      resourceDraft.optionB.trim(),
+      resourceDraft.optionC.trim(),
+      resourceDraft.optionD.trim()
+    ];
+
+    if (isBebuQuestion && (!trimmedQuestion || options.some((option) => !option))) return;
+    if (!isBebuQuestion && (!resourceDraft.title || !resourceDraft.description)) return;
     
     // Simulate upload progress
     uploadProgress.value = 10;
@@ -151,18 +206,50 @@ export function useAdminController() {
       }
     }, 200);
 
-    const result = await apiClient.addResource(moduleId, resourceDraft);
+    const payload = isBebuQuestion
+      ? {
+          Question: trimmedQuestion,
+          OptionA: options[0],
+          OptionB: options[1],
+          OptionC: options[2],
+          OptionD: options[3],
+          CorrectAnswer: (resourceDraft.correctOptionId || 'a').toUpperCase(),
+          Category: 'General',
+          Difficulty: 'Easy'
+        }
+      : resourceDraft;
+
+    const result = isBebuQuestion
+      ? await apiClient.createBebuQuestion(payload)
+      : apiClient.addResource
+        ? await apiClient.addResource(moduleId, payload)
+        : { ok: true, id: `resource-${Date.now()}` };
     
     clearInterval(interval);
     uploadProgress.value = 100;
 
     if (result.ok) {
       const store = getContentStore();
-      store.addResourceToModule(moduleId, { 
-        ...resourceDraft, 
-        id: result.id, 
-        fileName: resourceDraft.file?.name || 'internal_asset.pdf' 
-      });
+      const savedResource = isBebuQuestion
+        ? {
+            id: result.questionId,
+            prompt: payload.Question,
+            options: [
+              { id: 'a', label: payload.OptionA },
+              { id: 'b', label: payload.OptionB },
+              { id: 'c', label: payload.OptionC },
+              { id: 'd', label: payload.OptionD }
+            ],
+            correctOptionId: payload.CorrectAnswer.toLowerCase(),
+            explanation: `Correct answer: ${payload.CorrectAnswer}`
+          }
+        : {
+            ...payload,
+            id: result.id,
+            fileName: resourceDraft.file?.name || 'internal_asset.pdf'
+          };
+
+      store.addResourceToModule(moduleId, savedResource);
       
       // Delay closing to show 100%
       setTimeout(() => {
@@ -178,7 +265,11 @@ export function useAdminController() {
 
   const deleteResource = async (moduleId, resourceId) => {
     if (confirm('Are you sure you want to remove this material? visitors will no longer be able to download it.')) {
-      const result = await apiClient.deleteResource(moduleId, resourceId);
+      const result = moduleId === 'bebu-game'
+        ? await apiClient.deleteBebuQuestion(resourceId)
+        : apiClient.deleteResource
+          ? await apiClient.deleteResource(moduleId, resourceId)
+          : { ok: true };
       if (result.ok) {
         const store = getContentStore();
         store.removeResourceFromModule(moduleId, resourceId);

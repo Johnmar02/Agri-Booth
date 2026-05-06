@@ -1,11 +1,38 @@
 <script setup>
+import { onMounted, watch } from "vue";
 import { useRouter, useRoute } from "vue-router";
-import { watch } from "vue";
 import { useAdminController } from "@/controllers/useAdminController";
+import { useContentStore } from "@/stores/contentStore";
+import { signalrService } from "@/services/signalrService";
 
 const router = useRouter();
 const route = useRoute();
 const admin = useAdminController();
+const contentStore = useContentStore();
+
+onMounted(() => {
+  contentStore.initialize();
+  
+  // Start SignalR connection for real-time notifications
+  signalrService.on("ReceiveNotification", (message) => {
+    contentStore.addNotification({
+      type: "info",
+      message: message
+    });
+  });
+
+  signalrService.on("AdminAlert", (payload) => {
+    contentStore.addNotification({
+      type: "warning",
+      title: "Admin Alert",
+      message: payload
+    });
+  });
+
+  signalrService.startConnection().catch(err => {
+    console.warn("Initial SignalR connection failed (expected if not logged in):", err);
+  });
+});
 
 watch(
   () => admin.isAuthenticated.value,

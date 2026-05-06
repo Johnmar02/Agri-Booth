@@ -25,7 +25,8 @@ const closeLogin = () => {
 
 onMounted(() => {
   admin.loginForm.error = "";
-  admin.loginForm.key = "";
+  admin.loginForm.username = "";
+  admin.loginForm.password = "";
 });
 </script>
 
@@ -33,7 +34,8 @@ onMounted(() => {
   <AdminLoginOverlay
     :is-visible="true"
     :form="admin.loginForm"
-    @update-key="admin.loginForm.key = $event"
+    @update-username="admin.loginForm.username = $event"
+    @update-password="admin.loginForm.password = $event"
     @submit="handleSubmit"
     @close="closeLogin"
   />

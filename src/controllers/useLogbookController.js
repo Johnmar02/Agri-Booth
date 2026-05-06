@@ -121,8 +121,10 @@ export function useLogbookController(options = {}) {
       case 'email':
         form[field] = normalizeEmail(rawValue);
         break;
-      case 'feedback':
-        form[field] = normalizeMultiline(rawValue, 400);
+      case 'password':
+        // Passwords should not be normalized/trimmed in a way that breaks them,
+        // but we still strip angle brackets for basic safety.
+        form[field] = String(rawValue ?? '').replace(/[<>]/g, '').slice(0, 60);
         break;
       default:
         form[field] = normalizeSingleLine(rawValue, 120);
@@ -161,13 +163,31 @@ export function useLogbookController(options = {}) {
    * Gated modules represent measurable engagement and should not unlock unless the
    * frontend has captured a meaningful visitor profile.
    *
+   * @param {boolean} isLogin - Whether to validate for login or registration.
    * @returns {boolean}
    */
-  const validateForm = () => {
+  const validateForm = (isLogin = false) => {
     resetErrors();
 
     let isValid = true;
     const emailPattern = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+
+    if (!emailPattern.test(form.email)) {
+      errors.email = 'Provide a valid email address for future follow-up and access validation.';
+      isValid = false;
+    }
+
+    if (form.password.length < 6) {
+      errors.password = 'Password must be at least 6 characters long.';
+      isValid = false;
+    }
+
+    if (isLogin) {
+      if (!isValid) {
+        errors.form = 'Check your credentials before signing in.';
+      }
+      return isValid;
+    }
 
     if (form.name.length < 2) {
       errors.name = 'Enter a complete name so the booth can record who accessed the controlled modules.';
@@ -181,26 +201,6 @@ export function useLogbookController(options = {}) {
 
     if (form.affiliations && form.affiliations.length > 0 && form.affiliations.length < 2) {
       errors.affiliations = 'State the school, agency, farm, or group connected to this visit.';
-      isValid = false;
-    }
-
-    if (form.gender && !LOGBOOK_FIELD_OPTIONS.genders.includes(form.gender)) {
-      errors.gender = 'Select a valid gender option from the controlled list.';
-      isValid = false;
-    }
-
-    if (form.clientType && !LOGBOOK_FIELD_OPTIONS.clientTypes.includes(form.clientType)) {
-      errors.clientType = 'Select the visitor type that best matches this booth user.';
-      isValid = false;
-    }
-
-    if (!emailPattern.test(form.email)) {
-      errors.email = 'Provide a valid email address for future follow-up and access validation.';
-      isValid = false;
-    }
-
-    if (form.feedback && form.feedback.length > 400) {
-      errors.feedback = 'Feedback must stay within 400 characters to keep the form lightweight on mobile.';
       isValid = false;
     }
 
@@ -226,6 +226,43 @@ export function useLogbookController(options = {}) {
   });
 
   /**
+   * Authenticates a returning visitor.
+   */
+  const login = async () => {
+    if (isSubmitting.value) {
+      return { ok: false };
+    }
+
+    if (!validateForm(true)) {
+      return { ok: false };
+    }
+
+    isSubmitting.value = true;
+
+    try {
+      const result = await apiClient.loginVisitor(form.email, form.password);
+
+      if (result.ok) {
+        return {
+          ok: true,
+          payload: {
+            name: result.fullName,
+            email: result.email,
+          },
+        };
+      }
+      
+      errors.form = result.message || 'Login failed. Please check your credentials.';
+      return { ok: false };
+    } catch (err) {
+      errors.form = 'Connection error. Please try again.';
+      return { ok: false };
+    } finally {
+      isSubmitting.value = false;
+    }
+  };
+
+  /**
    * Simulates a frontend-only submission flow and returns a clean payload when valid.
    *
    * WHY THIS EXISTS:
@@ -239,7 +276,7 @@ export function useLogbookController(options = {}) {
       return { ok: false };
     }
 
-    if (!validateForm()) {
+    if (!validateForm(false)) {
       return { ok: false };
     }
 
@@ -258,6 +295,10 @@ export function useLogbookController(options = {}) {
         };
       }
       
+      errors.form = result.message || 'Registration failed. Please try again.';
+      return { ok: false };
+    } catch (err) {
+      errors.form = 'Connection error. Please try again.';
       return { ok: false };
     } finally {
       isSubmitting.value = false;
@@ -276,13 +317,68 @@ export function useLogbookController(options = {}) {
     resetErrors();
   };
 
+  /**
+   * Fills the form with existing data for profile editing.
+   */
+  const fillForm = (data) => {
+    Object.assign(form, {
+      ...createEmptyLogbookForm(),
+      name: data.name || '',
+      email: data.email || '',
+      address: data.address || '',
+      affiliations: data.affiliations || '',
+      gender: data.gender || '',
+      clientType: data.clientType || '',
+      password: '' // Keep password empty initially
+    });
+    resetErrors();
+  };
+
+  /**
+   * Updates an existing visitor profile.
+   */
+  const updateProfile = async (visitorId) => {
+    if (isSubmitting.value) {
+      return { ok: false };
+    }
+
+    if (!validateForm(false)) {
+      return { ok: false };
+    }
+
+    isSubmitting.value = true;
+
+    try {
+      const payload = buildSubmissionPayload();
+      const result = await apiClient.updateVisitor(visitorId, payload);
+
+      if (result.ok) {
+        return {
+          ok: true,
+          payload,
+        };
+      }
+      
+      errors.form = result.message || 'Update failed. Please try again.';
+      return { ok: false };
+    } catch (err) {
+      errors.form = 'Connection error. Please try again.';
+      return { ok: false };
+    } finally {
+      isSubmitting.value = false;
+    }
+  };
+
   return {
     form,
     errors,
     fieldOptions: LOGBOOK_FIELD_OPTIONS,
     isSubmitting,
     updateField,
+    login,
     submit,
+    updateProfile,
+    fillForm,
     resetForm,
   };
 }

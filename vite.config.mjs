@@ -8,5 +8,14 @@ export default defineConfig({
     alias: {
       '@': fileURLToPath(new URL('./src', import.meta.url))
     }
+  },
+  server: {
+    proxy: {
+      '/api': {
+        target: 'https://192.168.1.124:7137',
+        changeOrigin: true,
+        secure: false
+      }
+    }
   }
 });

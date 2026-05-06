@@ -595,9 +595,29 @@ const getProgramRegistrationUrl = (program) =>
                       <div class="trophy-v2">🏆</div>
                       <h3>Session Complete</h3>
                       <p class="score-v2">Performance: {{ Math.round((triviaState.score / triviaState.totalQuestions) * 100) }}%</p>
-                      <div class="rank-badge-v2" :class="triviaState.score === triviaState.totalQuestions ? 'elite' : 'certified'">
-                        {{ triviaState.score === triviaState.totalQuestions ? 'Elite Farmer Status' : 'Certified Learner' }}
+                      
+                      <div v-if="triviaState.leaderboard && triviaState.leaderboard.length" class="leaderboard-v2">
+                        <h4>Top 10 Leaderboard</h4>
+                        <table class="leaderboard-table">
+                          <thead>
+                            <tr>
+                              <th>Rank</th>
+                              <th>Visitor</th>
+                              <th>Score</th>
+                              <th>Time</th>
+                            </tr>
+                          </thead>
+                          <tbody>
+                            <tr v-for="entry in triviaState.leaderboard" :key="entry.rank">
+                              <td>{{ entry.rank }}</td>
+                              <td>{{ entry.visitor }}</td>
+                              <td>{{ entry.score }}/{{ entry.total }} ({{ entry.percentage }}%)</td>
+                              <td>{{ entry.timeTaken }}</td>
+                            </tr>
+                          </tbody>
+                        </table>
                       </div>
+
                       <button class="prime-action-btn" @click="$emit('trivia-reset')">Begin New Session</button>
                     </div>
                   </template>
@@ -744,9 +764,10 @@ const getProgramRegistrationUrl = (program) =>
 
 .experience-card {
   background: #ffffff;
-  width: 100%;
-  max-width: 1350px;
-  max-height: 90vh;
+  width: 95%;
+  max-width: 95%;
+  height: 95vh;
+  max-height: 95vh;
   border-radius: 32px;
   box-shadow: 0 50px 150px -30px rgba(0, 0, 0, 0.4);
   overflow: hidden;
@@ -757,7 +778,7 @@ const getProgramRegistrationUrl = (program) =>
 /* Premium Hero Header */
 .experience-hero {
   position: relative;
-  padding: 1rem 2.5rem;
+  padding: 0.8rem 2.5rem;
   background: linear-gradient(135deg, #1a6ab4 0%, #124d85 100%);
   color: white;
   display: flex;
@@ -770,26 +791,26 @@ const getProgramRegistrationUrl = (program) =>
   background: rgba(255, 255, 255, 0.15);
   padding: 4px 10px;
   border-radius: 999px;
-  font-size: 0.7rem;
+  font-size: 0.65rem;
   font-weight: 800;
   text-transform: uppercase;
   letter-spacing: 0.1em;
-  margin-bottom: 0.3rem;
+  margin-bottom: 0.2rem;
 }
 
 .hero-title {
   margin: 0;
-  font-size: 2rem;
+  font-size: 1.5rem;
   font-weight: 900;
   letter-spacing: -0.02em;
   line-height: 1.1;
 }
 
 .hero-subtitle {
-  margin: 0.2rem 0 0;
-  font-size: 0.95rem;
+  margin: 0.1rem 0 0;
+  font-size: 0.85rem;
   opacity: 0.9;
-  max-width: 600px;
+  max-width: 800px;
   line-height: 1.4;
 }
 
@@ -1036,6 +1057,46 @@ const getProgramRegistrationUrl = (program) =>
 .rank-badge-v2 { display: inline-block; padding: 8px 20px; border-radius: 99px; font-weight: 800; font-size: 0.9rem; text-transform: uppercase; margin: 1rem 0 2rem; }
 .rank-badge-v2.elite { background: #fff4e6; color: #d17c24; border: 1px solid #fbd38d; }
 .rank-badge-v2.certified { background: #f1f5f9; color: #64748b; }
+
+.leaderboard-v2 {
+  margin: 2rem 0;
+  background: white;
+  border-radius: 16px;
+  padding: 1.5rem;
+  border: 1px solid #e2e8f0;
+  text-align: left;
+}
+
+.leaderboard-v2 h4 {
+  margin-bottom: 1rem;
+  color: #1a6ab4;
+  font-weight: 800;
+  text-transform: uppercase;
+  font-size: 0.9rem;
+}
+
+.leaderboard-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.85rem;
+}
+
+.leaderboard-table th {
+  text-align: left;
+  padding: 0.5rem;
+  border-bottom: 2px solid #f1f5f9;
+  color: #64748b;
+  font-weight: 700;
+}
+
+.leaderboard-table td {
+  padding: 0.75rem 0.5rem;
+  border-bottom: 1px solid #f1f5f9;
+}
+
+.leaderboard-table tr:last-child td {
+  border-bottom: none;
+}
 
 /* 4. E-Learning v2 */
 .learning-grid-v2 {

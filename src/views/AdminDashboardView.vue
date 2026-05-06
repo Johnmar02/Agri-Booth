@@ -45,6 +45,12 @@ const emit = defineEmits([
 
 const selectedModuleId = ref("");
 const activeSection = ref("overview");
+const hiddenContentModuleIds = new Set([
+  "virtual-tour",
+  "newsletters",
+  "chat-with-us",
+  "digital-calculators",
+]);
 
 const navItems = [
   { id: "overview", label: "Overview", icon: "dashboard" },
@@ -52,13 +58,20 @@ const navItems = [
   { id: "activity", label: "Visitor Logbook", icon: "history" },
 ];
 
+const managedModules = computed(() =>
+  props.modules.filter((module) => !hiddenContentModuleIds.has(module.id))
+);
+
 const selectedModule = computed(
-  () => props.modules.find((m) => m.id === selectedModuleId.value) || props.modules[0]
+  () => managedModules.value.find((m) => m.id === selectedModuleId.value) || managedModules.value[0]
 );
 
 // We treat "resources" as the unified list for admin management
 const allResources = computed(() => {
   if (!selectedModule.value) return [];
+  if (selectedModule.value.id === "bebu-game") {
+    return selectedModule.value.questions || [];
+  }
   // Some modules use 'materials', others use 'resources', etc.
   // For the purpose of the Admin Dashboard, we'll focus on the 'resources' array which is the dynamic one.
   return selectedModule.value.resources || [];
@@ -67,8 +80,11 @@ const allResources = computed(() => {
 watch(
   () => props.modules,
   (newModules) => {
-    if (newModules.length && !selectedModuleId.value) {
-      selectedModuleId.value = newModules[0].id;
+    const firstManagedModule = newModules.find((module) => !hiddenContentModuleIds.has(module.id));
+    const selectedStillVisible = managedModules.value.some((module) => module.id === selectedModuleId.value);
+
+    if (firstManagedModule && (!selectedModuleId.value || !selectedStillVisible)) {
+      selectedModuleId.value = firstManagedModule.id;
     }
   },
   { immediate: true }
@@ -189,7 +205,7 @@ const handleFileChange = (e, type) => {
               <h3>Select Module</h3>
               <div class="module-list">
                 <button
-                  v-for="module in props.modules"
+                  v-for="module in managedModules"
                   :key="module.id"
                   class="module-item"
                   :class="{ active: selectedModuleId === module.id }"
@@ -206,14 +222,85 @@ const handleFileChange = (e, type) => {
               <div v-if="isAddingResource" class="inline-form-container">
                 <div class="panel-header">
                   <div class="panel-info">
-                    <h3>New Material for {{ selectedModule?.title }}</h3>
-                    <p>Enter the details for the new asset below.</p>
+                    <h3>{{ selectedModule?.id === 'bebu-game' ? 'New Bebu Game Question' : `New Material for ${selectedModule?.title}` }}</h3>
+                    <p>{{ selectedModule?.id === 'bebu-game' ? 'Add one multiple-choice question with A, B, C, and D choices.' : 'Enter the details for the new asset below.' }}</p>
                   </div>
                   <button class="btn-text" @click="$emit('cancel-add')">Cancel</button>
                 </div>
 
                 <form class="upload-form" @submit.prevent="$emit('commit-resource', selectedModuleId)">
-                  <div class="form-grid">
+                  <div v-if="selectedModule?.id === 'bebu-game'" class="form-grid">
+                    <div class="field full">
+                      <label>Question</label>
+                      <textarea
+                        rows="3"
+                        placeholder="Enter the trivia question..."
+                        :value="resourceDraft.question"
+                        @input="$emit('update-draft', { question: $event.target.value })"
+                        required
+                      ></textarea>
+                    </div>
+
+                    <div class="field">
+                      <label>A</label>
+                      <input
+                        type="text"
+                        placeholder="Choice A"
+                        :value="resourceDraft.optionA"
+                        @input="$emit('update-draft', { optionA: $event.target.value })"
+                        required
+                      />
+                    </div>
+
+                    <div class="field">
+                      <label>B</label>
+                      <input
+                        type="text"
+                        placeholder="Choice B"
+                        :value="resourceDraft.optionB"
+                        @input="$emit('update-draft', { optionB: $event.target.value })"
+                        required
+                      />
+                    </div>
+
+                    <div class="field">
+                      <label>C</label>
+                      <input
+                        type="text"
+                        placeholder="Choice C"
+                        :value="resourceDraft.optionC"
+                        @input="$emit('update-draft', { optionC: $event.target.value })"
+                        required
+                      />
+                    </div>
+
+                    <div class="field">
+                      <label>D</label>
+                      <input
+                        type="text"
+                        placeholder="Choice D"
+                        :value="resourceDraft.optionD"
+                        @input="$emit('update-draft', { optionD: $event.target.value })"
+                        required
+                      />
+                    </div>
+
+                    <div class="field">
+                      <label>Correct Answer</label>
+                      <select
+                        :value="resourceDraft.correctOptionId"
+                        @change="$emit('update-draft', { correctOptionId: $event.target.value })"
+                        required
+                      >
+                        <option value="a">A</option>
+                        <option value="b">B</option>
+                        <option value="c">C</option>
+                        <option value="d">D</option>
+                      </select>
+                    </div>
+                  </div>
+
+                  <div v-else class="form-grid">
                     <div class="field full">
                       <label>Material Title</label>
                       <input 
@@ -281,7 +368,7 @@ const handleFileChange = (e, type) => {
 
                   <div class="form-footer">
                     <button type="submit" class="btn-primary" :disabled="uploadProgress > 0">
-                      Save to Catalog
+                      {{ selectedModule?.id === 'bebu-game' ? 'Save Question' : 'Save to Catalog' }}
                     </button>
                   </div>
                 </form>
@@ -295,14 +382,14 @@ const handleFileChange = (e, type) => {
                     <p>{{ selectedModule?.summary }}</p>
                   </div>
                   <button class="btn-primary" @click="$emit('start-add')">
-                    Add Material
+                    {{ selectedModule?.id === 'bebu-game' ? 'Add Question' : 'Add Material' }}
                   </button>
                 </div>
 
                 <div class="resource-grid">
                   <div v-if="allResources.length === 0" class="empty-state">
-                    <p>No managed materials in this module.</p>
-                    <span>Click "Add Material" to upload your first asset.</span>
+                    <p>No managed {{ selectedModule?.id === 'bebu-game' ? 'questions' : 'materials' }} in this module.</p>
+                    <span>Click "{{ selectedModule?.id === 'bebu-game' ? 'Add Question' : 'Add Material' }}" to create your first item.</span>
                   </div>
                   
                   <div
@@ -310,10 +397,13 @@ const handleFileChange = (e, type) => {
                     :key="res.id"
                     class="resource-card"
                   >
-                    <div class="res-type">{{ res.format }}</div>
+                    <div class="res-type">{{ selectedModule?.id === 'bebu-game' ? 'Question' : res.format }}</div>
                     <div class="res-body">
-                      <h4>{{ res.title }}</h4>
-                      <p>{{ res.description }}</p>
+                      <h4>{{ selectedModule?.id === 'bebu-game' ? res.prompt : res.title }}</h4>
+                      <p v-if="selectedModule?.id === 'bebu-game'">
+                        A. {{ res.options?.[0]?.label }} | B. {{ res.options?.[1]?.label }} | C. {{ res.options?.[2]?.label }} | D. {{ res.options?.[3]?.label }}
+                      </p>
+                      <p v-else>{{ res.description }}</p>
                     </div>
                     <div class="res-footer">
                       <button class="btn-danger" @click="$emit('delete-resource', { moduleId: selectedModule.id, resourceId: res.id })">
@@ -347,7 +437,7 @@ const handleFileChange = (e, type) => {
                   </tr>
                 </thead>
                 <tbody>
-                  <tr v-for="log in [...visitorLogs].reverse()" :key="log.submittedAt">
+                  <tr v-for="log in visitorLogs" :key="log.submittedAt">
                     <td><strong>{{ log.name }}</strong></td>
                     <td>{{ formatTimestamp(log.submittedAt) }}</td>
                     <td>{{ log.affiliations }}</td>
