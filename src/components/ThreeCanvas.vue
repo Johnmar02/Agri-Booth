@@ -1,281 +1,112 @@
 <script setup>
-import { onMounted, onUnmounted, ref } from "vue";
-import * as THREE from "three";
-import { OrbitControls } from "three/examples/jsm/controls/OrbitControls.js";
-import { GLTFLoader } from "three/examples/jsm/loaders/GLTFLoader.js";
+import { onMounted, onUnmounted, ref, computed } from "vue";
+import { SceneView } from "@/views/SceneView";
+import { getHotspotLayout } from "@/models/boothModel";
 
 /**
  * VIEW: ThreeCanvas
  * Renders the 3D environment of the ITCPH Digital Agri-Booth.
- * Primarily handles GLB loading, lighting, and frame-by-frame rendering.
- * Communicates with the Booth Controller for interaction logic.
+ * This is now a thin wrapper around the SceneView class.
  */
 
 const emit = defineEmits(["hotspot-click", "background-click"]);
 
-const canvasContainer = ref(null);
+const hotspotCatalog = getHotspotLayout();
+const hotspotLabels = Object.fromEntries(
+  hotspotCatalog.map((h) => [h.id, h.label])
+);
 
-let scene, camera, renderer, controls, gltfLoader;
-let interactableObjects = [];
-let hotspots = [];
-let isLerpingToTarget = false;
-let targetCameraPos = new THREE.Vector3();
-let targetLookAt = new THREE.Vector3();
-let defaultCameraPos = new THREE.Vector3(0, 5, 12);
-let defaultLookAt = new THREE.Vector3(0, 3, -2);
-let hoveredHotspot = null;
+const canvasContainer = ref(null);
 const hoveredLabel = ref("");
 const tooltipPos = ref({ x: 0, y: 0 });
-const hotspotLabels = {
-  "hotspot-virtual-tour": "360 Virtual Tour",
-  "hotspot-iec": "IEC Training Materials",
-  "hotspot-newsletters": "Farm Newsletters",
-  "hotspot-corporate": "Success Stories",
-  "hotspot-corp-materials": "Corporate Materials",
-  "hotspot-chat": "Technical Advisory Chat",
-  "hotspot-calculators": "Digital Calculators",
-  "hotspot-elearning": "E-Learning Portal",
-  "hotspot-training": "Training Programs",
-  "hotspot-bebu": "Bebu Game & Trivia",
-};
+const loadingProgress = ref(0);
+const isLoaded = ref(false);
+const webglSupported = ref(true);
 
-const initThree = () => {
-  scene = new THREE.Scene();
-  scene.background = new THREE.Color(0xd0d0d6);
-  scene.fog = new THREE.FogExp2(0xd0d0d6, 0.015);
+let sceneView = null;
 
-  camera = new THREE.PerspectiveCamera(
-    45,
-    window.innerWidth / window.innerHeight,
-    0.1,
-    1000,
-  );
-  camera.position.copy(defaultCameraPos);
-  camera.lookAt(defaultLookAt);
-
-  renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true });
-  renderer.setSize(window.innerWidth, window.innerHeight);
-  renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
-  renderer.shadowMap.enabled = true;
-  renderer.shadowMap.type = THREE.PCFSoftShadowMap;
-  renderer.outputColorSpace = THREE.SRGBColorSpace;
-  renderer.toneMapping = THREE.ACESFilmicToneMapping;
-  canvasContainer.value.appendChild(renderer.domElement);
-
-  controls = new OrbitControls(camera, renderer.domElement);
-  controls.enableDamping = true;
-  controls.dampingFactor = 0.05;
-  controls.maxPolarAngle = Math.PI / 2 - 0.05;
-  controls.target.copy(defaultLookAt);
-
-  setupLighting();
-  loadBooth();
-
-  window.addEventListener("resize", onWindowResize);
-  window.addEventListener("pointermove", onPointerMove);
-  window.addEventListener("pointerdown", onPointerDown);
-};
-
-const setupLighting = () => {
-  const ambient = new THREE.AmbientLight(0xffffff, 1.8);
-  scene.add(ambient);
-
-  const main = new THREE.DirectionalLight(0xffffff, 3.0);
-  main.position.set(5, 25, 10);
-  main.castShadow = true;
-  scene.add(main);
-
-  const fill = new THREE.DirectionalLight(0xffffff, 2.0);
-  fill.position.set(-15, 10, -15);
-  scene.add(fill);
-};
-
-const loadBooth = () => {
-  gltfLoader = new GLTFLoader();
-  gltfLoader.load("/models/custom_booth/3DAgri-booth.glb", (gltf) => {
-    const object = gltf.scene;
-
-    const box = new THREE.Box3().setFromObject(object);
-    const size = box.getSize(new THREE.Vector3());
-    if (size.x > 0) {
-      const scale = 8 / size.x;
-      object.scale.set(scale, scale, scale);
-    }
-
-    const boxScaled = new THREE.Box3().setFromObject(object);
-    object.position.y = -boxScaled.min.y + 2.5;
-
-    const finalBox = new THREE.Box3().setFromObject(object);
-    const modelCenter = finalBox.getCenter(new THREE.Vector3());
-
-    defaultLookAt.copy(modelCenter);
-    controls.target.copy(modelCenter);
-
-    object.traverse((child) => {
-      if (child.isMesh) {
-        child.castShadow = true;
-        child.receiveShadow = true;
-      }
-    });
-
-    scene.add(object);
-    buildHotspots(modelCenter);
-  });
-};
-
-const buildHotspots = (modelCenter) => {
-  const cx = modelCenter.x;
-  const cy = modelCenter.y;
-  const cz = modelCenter.z;
-
-  const texture = createHotspotTexture();
-  const material = new THREE.SpriteMaterial({
-    map: texture,
-    transparent: true,
-    blending: THREE.AdditiveBlending,
-  });
-
-  const addHotspot = (id, x, y, z) => {
-    const sprite = new THREE.Sprite(material.clone());
-    sprite.position.set(x, y, z);
-    sprite.scale.set(0.5, 0.5, 1);
-    sprite.userData = { id };
-    scene.add(sprite);
-    interactableObjects.push(sprite);
-    hotspots.push({ mesh: sprite, baseScale: 0.5 });
-  };
-
-  // The 3D model hotspots mapped to the centralized boothModel 'hotspot-' IDs
-  addHotspot("hotspot-virtual-tour", cx + 0.3, cy - 0.3, cz - 1.2);
-  addHotspot("hotspot-iec", cx - 0.4, cy - 0.3, cz + 1.0); // was dot_brochure_rack
-  addHotspot("hotspot-newsletters", cx - 1.2, cy - 0.4, cz + 1.0); // was dot_left_shelf
-  addHotspot("hotspot-corporate", cx - 0.5, cy + 0.1, cz + 0.9); // was dot_banner
-  addHotspot("hotspot-chat", cx + 0.95, cy - 0.4, cz + 0.9); // was dot_table
-  addHotspot("hotspot-calculators", cx + 1.4, cy - 0.2, cz + 0.9); // was dot_right_shelf
-  addHotspot("hotspot-elearning", cx + 1.0, cy + 0.8, cz + 1.8); // was dot_top_sign
-  addHotspot("hotspot-corp-materials", cx - 1.0, cy + 0.8, cz + 1.8);
-  addHotspot("hotspot-training", cx + 0.95, cy - 0.7, cz + 1.5);
-  addHotspot("hotspot-bebu", cx - 1.2, cy + 0.1, cz + 1.0); // was dot_chairs
-};
-
-const createHotspotTexture = () => {
-  const canvas = document.createElement("canvas");
-  canvas.width = 64;
-  canvas.height = 64;
-  const ctx = canvas.getContext("2d");
-  const gradient = ctx.createRadialGradient(32, 32, 0, 32, 32, 32);
-  gradient.addColorStop(0, "rgba(255, 255, 255, 1)");
-  gradient.addColorStop(1, "rgba(255, 255, 255, 0)");
-  ctx.fillStyle = gradient;
-  ctx.fillRect(0, 0, 64, 64);
-  return new THREE.CanvasTexture(canvas);
-};
-
-const focusOnTarget = (object) => {
-  isLerpingToTarget = true;
-  if (object) {
-    targetLookAt.copy(object.position);
-    targetCameraPos.copy(object.position).add(new THREE.Vector3(0, 0.5, 3.5));
-  } else {
-    targetCameraPos.copy(defaultCameraPos);
-    targetLookAt.copy(defaultLookAt);
+const checkWebGLSupport = () => {
+  try {
+    const canvas = document.createElement("canvas");
+    return !!(
+      window.WebGLRenderingContext &&
+      (canvas.getContext("webgl") || canvas.getContext("experimental-webgl"))
+    );
+  } catch (e) {
+    return false;
   }
 };
 
-const raycaster = new THREE.Raycaster();
-const pointer = new THREE.Vector2();
-
-const onPointerMove = (event) => {
-  pointer.x = (event.clientX / window.innerWidth) * 2 - 1;
-  pointer.y = -(event.clientY / window.innerHeight) * 2 + 1;
-
-  raycaster.setFromCamera(pointer, camera);
-  const intersects = raycaster.intersectObjects(interactableObjects);
-
-  if (intersects.length > 0) {
-    document.body.style.cursor = "pointer";
-    hoveredHotspot = intersects[0].object;
-    hoveredLabel.value = hotspotLabels[hoveredHotspot.userData.id] || "";
-    tooltipPos.value = { x: event.clientX + 20, y: event.clientY + 20 };
+const handleHoverChange = (data) => {
+  if (data) {
+    hoveredLabel.value = hotspotLabels[data.id] || "";
+    tooltipPos.value = { x: data.clientX + 20, y: data.clientY + 20 };
   } else {
-    document.body.style.cursor = "default";
-    hoveredHotspot = null;
     hoveredLabel.value = "";
   }
 };
 
-const onPointerDown = (event) => {
-  // Ignore clicks on UI
-  if (event.target.closest("#overlay-ui")) return;
-
-  pointer.x = (event.clientX / window.innerWidth) * 2 - 1;
-  pointer.y = -(event.clientY / window.innerHeight) * 2 + 1;
-
-  raycaster.setFromCamera(pointer, camera);
-  const intersects = raycaster.intersectObjects(interactableObjects);
-
-  if (intersects.length > 0) {
-    const clicked = intersects[0].object;
-    // Brief "click" visual feedback
-    clicked.scale.set(0.7, 0.7, 1);
-
-    emit("hotspot-click", { id: clicked.userData.id, object: clicked });
-  } else {
-    emit("background-click");
+const handleProgress = (progress) => {
+  loadingProgress.value = progress;
+  if (progress >= 100) {
+    // Artificial delay for smooth transition
+    setTimeout(() => {
+      isLoaded.value = true;
+    }, 500);
   }
-};
-
-defineExpose({
-  focusOnTarget,
-});
-
-const onWindowResize = () => {
-  camera.aspect = window.innerWidth / window.innerHeight;
-  camera.updateProjectionMatrix();
-  renderer.setSize(window.innerWidth, window.innerHeight);
-};
-
-const animate = () => {
-  requestAnimationFrame(animate);
-
-  if (isLerpingToTarget) {
-    camera.position.lerp(targetCameraPos, 0.05);
-    controls.target.lerp(targetLookAt, 0.05);
-    if (camera.position.distanceTo(targetCameraPos) < 0.1)
-      isLerpingToTarget = false;
-  }
-
-  controls.update();
-
-  const time = Date.now() * 0.003;
-  hotspots.forEach((h) => {
-    // If hovered, grow significantly. Otherwise, subtle pulse.
-    const isHovered = hoveredHotspot === h.mesh;
-    const hoverScale = isHovered ? 0.25 : 0;
-    const pulse = Math.sin(time) * 0.08;
-
-    const s = h.baseScale + pulse + hoverScale;
-    h.mesh.scale.set(s, s, 1);
-  });
-
-  renderer.render(scene, camera);
 };
 
 onMounted(() => {
-  initThree();
-  animate();
+  if (!checkWebGLSupport()) {
+    webglSupported.value = false;
+    isLoaded.value = true;
+    return;
+  }
+
+  sceneView = new SceneView(canvasContainer.value, {
+    onHotspotClick: (data) => emit("hotspot-click", data),
+    onBackgroundClick: () => emit("background-click"),
+    onHoverChange: handleHoverChange,
+    onProgress: handleProgress
+  });
 });
 
 onUnmounted(() => {
-  window.removeEventListener("resize", onWindowResize);
-  window.removeEventListener("pointermove", onPointerMove);
-  window.removeEventListener("pointerdown", onPointerDown);
-  document.body.style.cursor = "default";
+  sceneView?.dispose();
+});
+
+defineExpose({
+  focusOnTarget: (object) => sceneView?.focusOnTarget(object)
 });
 </script>
 
 <template>
   <div ref="canvasContainer" class="canvas-container">
+    <Transition name="fade">
+      <div v-if="!isLoaded" class="loading-overlay">
+        <div class="loading-card">
+          <img src="/ITCPH_icon.png" alt="Loading" class="loading-logo" />
+          <div class="loading-text">
+            <h3>Preparing Booth...</h3>
+            <p>Gathering resources for your visit</p>
+          </div>
+          <div class="progress-bar-container">
+            <div class="progress-bar" :style="{ width: loadingProgress + '%' }"></div>
+          </div>
+          <span class="progress-number">{{ loadingProgress }}%</span>
+        </div>
+      </div>
+    </Transition>
+
+    <div v-if="!webglSupported" class="webgl-fallback">
+      <div class="fallback-card">
+        <div class="fallback-icon">⚠️</div>
+        <h3>3D Booth Unavailable</h3>
+        <p>Your device or browser doesn't support WebGL, which is required for the 3D experience.</p>
+        <p class="suggestion">You can still explore using the 2D Hotspot Map below.</p>
+      </div>
+    </div>
+
     <Transition name="tooltip-fade">
       <div
         v-if="hoveredLabel"
@@ -289,6 +120,7 @@ onUnmounted(() => {
   </div>
 </template>
 
+
 <style scoped>
 .canvas-container {
   position: absolute;
@@ -297,6 +129,126 @@ onUnmounted(() => {
   width: 100vw;
   height: 100vh;
   z-index: 1;
+}
+
+.loading-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 1000;
+  background: #d0d0d6;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.loading-card {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 1.5rem;
+  padding: 3rem;
+  background: white;
+  border-radius: 32px;
+  box-shadow: 0 30px 60px rgba(0, 0, 0, 0.12);
+  width: min(400px, 90vw);
+}
+
+.loading-logo {
+  width: 5rem;
+  height: 5rem;
+  object-fit: contain;
+  animation: pulse-soft 2s infinite ease-in-out;
+}
+
+.loading-text {
+  text-align: center;
+}
+
+.loading-text h3 {
+  margin: 0;
+  color: #1a6ab4;
+  font-size: 1.5rem;
+  font-weight: 800;
+}
+
+.loading-text p {
+  margin: 0.5rem 0 0;
+  color: #64748b;
+  font-size: 0.95rem;
+}
+
+.progress-bar-container {
+  width: 100%;
+  height: 8px;
+  background: #f1f5f9;
+  border-radius: 99px;
+  overflow: hidden;
+}
+
+.progress-bar {
+  height: 100%;
+  background: linear-gradient(90deg, #1a6ab4, #d17c24);
+  transition: width 0.3s ease;
+}
+
+.progress-number {
+  font-weight: 800;
+  color: #1a6ab4;
+  font-size: 1.1rem;
+}
+
+@keyframes pulse-soft {
+  0%, 100% { transform: scale(1); opacity: 1; }
+  50% { transform: scale(1.05); opacity: 0.8; }
+}
+
+.fade-enter-active, .fade-leave-active {
+  transition: opacity 0.8s ease;
+}
+.fade-enter-from, .fade-leave-to {
+  opacity: 0;
+}
+
+.webgl-fallback {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: #d0d0d6;
+  z-index: 5;
+  padding: 1.5rem;
+}
+
+.fallback-card {
+  background: white;
+  padding: 2.5rem;
+  border-radius: 28px;
+  text-align: center;
+  max-width: 440px;
+  box-shadow: 0 20px 50px rgba(0, 0, 0, 0.1);
+}
+
+.fallback-icon {
+  font-size: 3rem;
+  margin-bottom: 1rem;
+}
+
+.fallback-card h3 {
+  margin: 0 0 1rem;
+  color: #1a6ab4;
+  font-size: 1.6rem;
+}
+
+.fallback-card p {
+  color: #64748b;
+  line-height: 1.6;
+  margin: 0 0 1rem;
+}
+
+.suggestion {
+  font-weight: 700;
+  color: #d17c24 !important;
 }
 
 .hotspot-tooltip {

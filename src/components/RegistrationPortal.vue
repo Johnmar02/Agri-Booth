@@ -126,6 +126,16 @@ const toggleMode = () => {
                 <span v-if="errors.email" class="error-text">{{ errors.email }}</span>
               </div>
 
+              <div v-if="isProfileMode" class="form-group" :class="{ 'has-error': errors.currentPassword }">
+                <label>Current Password</label>
+                <input 
+                  :value="form.currentPassword" 
+                  @input="$emit('update-field', { field: 'currentPassword', value: $event.target.value })"
+                  type="password" placeholder="••••••••" 
+                />
+                <span v-if="errors.currentPassword" class="error-text">{{ errors.currentPassword }}</span>
+              </div>
+
               <div class="form-group" :class="{ 'has-error': errors.password, 'full-width': isLoginMode }">
                 <label>{{ isProfileMode ? 'New Password' : 'Password *' }}</label>
                 <input 

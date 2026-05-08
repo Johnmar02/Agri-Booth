@@ -18,13 +18,20 @@ let onUnauthorizedCallback = null;
  */
 async function request(endpoint, options = {}) {
   const url = buildUrl(endpoint);
+  const isFormData = options.body instanceof FormData;
+
+  const headers = { ...options.headers };
+  // If it's FormData, let the browser set the Content-Type with boundary
+  if (isFormData) {
+    delete headers['Content-Type'];
+  } else if (!headers['Content-Type']) {
+    headers['Content-Type'] = 'application/json';
+  }
+
   try {
     const response = await fetch(url, {
       ...options,
-      headers: {
-        'Content-Type': 'application/json',
-        ...options.headers,
-      },
+      headers,
       credentials: 'include',
     });
 
@@ -83,6 +90,32 @@ export const apiClient = {
   },
 
   /**
+   * AuthController: Fetches all admin users (Admin only).
+   */
+  async getAdmins() {
+    return await request('/Auth');
+  },
+
+  /**
+   * AuthController: Registers a new admin user (SuperAdmin only).
+   */
+  async registerAdmin(payload) {
+    return await request('/Auth/register', {
+      method: 'POST',
+      body: JSON.stringify(payload),
+    });
+  },
+
+  /**
+   * AuthController: Deletes an admin user (SuperAdmin only).
+   */
+  async deleteAdmin(id) {
+    return await request(`/Auth/delete/${id}`, {
+      method: 'DELETE',
+    });
+  },
+
+  /**
    * VisitorsController: Authenticates a visitor login attempt.
    */
   async loginVisitor(email, password) {
@@ -123,20 +156,20 @@ export const apiClient = {
   },
 
   /**
-   * VisitorsController: Updates visitor profile data.
+   * VisitorsController: Visitor updates own profile.
    */
-  async updateVisitor(visitorId, payload) {
+  async updateProfile(payload) {
     const mappedPayload = {
-      FullName: payload.name,
-      Email: payload.email,
-      Password: payload.password || '',
-      Address: payload.address,
-      Affiliation: payload.affiliations,
-      Gender: payload.gender,
-      ClientType: payload.clientType,
+      fullName: payload.name,
+      address: payload.address,
+      affiliation: payload.affiliations,
+      gender: payload.gender,
+      clientType: payload.clientType,
+      currentPassword: payload.currentPassword || '',
+      newPassword: payload.password || '', 
     };
 
-    return await request(`/Visitors/${visitorId}`, {
+    return await request('/Visitors/update', {
       method: 'PUT',
       body: JSON.stringify(mappedPayload),
     });
@@ -150,6 +183,49 @@ export const apiClient = {
   },
 
   /**
+   * TrainingProgramsController: Fetches all active training programs.
+   */
+  async getTrainingPrograms() {
+    return await request('/TrainingPrograms');
+  },
+
+  /**
+   * TrainingProgramsController: Admin creates a new training program.
+   */
+  async createTrainingProgram(payload) {
+    return await request('/TrainingPrograms', {
+      method: 'POST',
+      body: JSON.stringify(payload),
+    });
+  },
+
+  /**
+   * TrainingProgramsController: Visitor registers for a program.
+   */
+  async registerForTraining(payload) {
+    return await request('/TrainingPrograms/register', {
+      method: 'POST',
+      body: JSON.stringify(payload),
+    });
+  },
+
+  /**
+   * TrainingProgramsController: Admin fetches registrations for a program.
+   */
+  async getTrainingRegistrations(programId) {
+    return await request(`/TrainingPrograms/${programId}/registrations`);
+  },
+
+  /**
+   * TrainingProgramsController: Admin deletes a program.
+   */
+  async deleteTrainingProgram(id) {
+    return await request(`/TrainingPrograms/${id}`, {
+      method: 'DELETE',
+    });
+  },
+
+  /**
    * IECMaterialsController: Fetches all IEC materials.
    */
   async getIECMaterials() {
@@ -157,10 +233,22 @@ export const apiClient = {
   },
 
   /**
-   * TrainingProgramsController: Fetches training programs.
+   * IECMaterialsController: Admin uploads a new material.
    */
-  async getTrainingPrograms() {
-    return await request('/TrainingPrograms');
+  async uploadIECMaterial(formData) {
+    return await request('/IECMaterials', {
+      method: 'POST',
+      body: formData,
+    });
+  },
+
+  /**
+   * IECMaterialsController: Admin deletes a material.
+   */
+  async deleteIECMaterial(id) {
+    return await request(`/IECMaterials/${id}`, {
+      method: 'DELETE',
+    });
   },
 
   /**
@@ -168,6 +256,157 @@ export const apiClient = {
    */
   async getCourses() {
     return await request('/Courses');
+  },
+
+  /**
+   * CoursesController: Fetches a single course by ID.
+   */
+  async getCourseById(id) {
+    return await request(`/Courses/${id}`);
+  },
+
+  /**
+   * CoursesController: Admin creates a new course.
+   */
+  async createCourse(payload) {
+    return await request('/Courses/lessons', {
+      method: 'POST',
+      body: JSON.stringify(payload),
+    });
+  },
+
+  /**
+   * CoursesController: Admin adds a module to a course.
+   */
+  async createCourseModule(payload) {
+    return await request('/Courses/modules', {
+      method: 'POST',
+      body: JSON.stringify(payload),
+    });
+  },
+
+  /**
+   * CoursesController: Admin adds a lesson to a module.
+   */
+  async createLesson(payload) {
+    return await request('/Courses', {
+      method: 'POST',
+      body: JSON.stringify(payload),
+    });
+  },
+
+  /**
+   * CoursesController: Admin adds quiz questions to a module.
+   */
+  async createQuizQuestions(payload) {
+    return await request('/Courses/quiz-questions', {
+      method: 'POST',
+      body: JSON.stringify(payload),
+    });
+  },
+
+  /**
+   * CoursesController: Admin updates a course.
+   */
+  async updateCourse(id, payload) {
+    return await request(`/Courses/${id}`, {
+      method: 'PUT',
+      body: JSON.stringify(payload),
+    });
+  },
+
+  /**
+   * CoursesController: Admin updates a module.
+   */
+  async updateCourseModule(id, payload) {
+    return await request(`/Courses/modules/${id}`, {
+      method: 'PUT',
+      body: JSON.stringify(payload),
+    });
+  },
+
+  /**
+   * CoursesController: Admin updates a lesson.
+   */
+  async updateLesson(id, payload) {
+    return await request(`/Courses/lessons/${id}`, {
+      method: 'PUT',
+      body: JSON.stringify(payload),
+    });
+  },
+
+  /**
+   * CoursesController: Admin deactivates a course.
+   */
+  async deleteCourse(id) {
+    return await request(`/Courses/${id}`, {
+      method: 'DELETE',
+    });
+  },
+
+  /**
+   * CoursesController: Visitor enrolls in a course.
+   */
+  async enrollInCourse(visitorId, courseId) {
+    return await request('/Courses/enroll', {
+      method: 'POST',
+      body: JSON.stringify({ VisitorId: visitorId, CourseId: courseId, EnrolledAt: new Date().toISOString() }),
+    });
+  },
+
+  /**
+   * CoursesController: Fetches a visitor's enrolled courses.
+   */
+  async getMyCourses(visitorId) {
+    return await request(`/Courses/my-courses/${visitorId}`);
+  },
+
+  /**
+   * CoursesController: Marks a lesson as completed.
+   */
+  async completeLesson(enrollmentId, lessonId) {
+    return await request('/Courses/complete-lesson', {
+      method: 'POST',
+      body: JSON.stringify({ EnrollmentId: enrollmentId, LessonId: lessonId }),
+    });
+  },
+
+  /**
+   * CoursesController: Fetches full lesson details.
+   */
+  async getLesson(id) {
+    return await request(`/Courses/lessons/${id}`);
+  },
+
+  /**
+   * CoursesController: Fetches quiz questions for a module.
+   */
+  async getQuiz(moduleId) {
+    return await request(`/Courses/modules/${moduleId}/quiz`);
+  },
+
+  /**
+   * CoursesController: Submits quiz answers.
+   */
+  async submitQuiz(payload) {
+    return await request('/Courses/submit-quiz', {
+      method: 'POST',
+      body: JSON.stringify(payload),
+    });
+  },
+
+  /**
+   * CoursesController: Fetches enrollment progress.
+   */
+  async getProgress(enrollmentId) {
+    return await request(`/Courses/progress/${enrollmentId}`);
+  },
+
+  /**
+   * CoursesController: Fetches enrollment certificate.
+   */
+  async getCertificate(enrollmentId) {
+    return await request(`/Courses/certificate/${enrollmentId}`);
   },
 
   /**
@@ -181,10 +420,49 @@ export const apiClient = {
   },
 
   /**
+   * FeedbacksController: Admin fetches all feedbacks.
+   */
+  async getFeedbacks() {
+    return await request('/Feedbacks');
+  },
+
+  /**
    * AnalyticsController: Fetches booth statistics.
    */
   async getStats() {
     return await request('/Analytics/Summary');
+  },
+
+  async getDailyVisitors() {
+    return await request('/Analytics/visitors/daily');
+  },
+
+  async getVisitorsByGender() {
+    return await request('/Analytics/visitors/by-gender');
+  },
+
+  async getVisitorsByClientType() {
+    return await request('/Analytics/visitors/by-client-type');
+  },
+
+  async getVisitorsByAddress() {
+    return await request('/Analytics/visitors/by-address');
+  },
+
+  async getTopDownloads() {
+    return await request('/Analytics/materials/top-downloads');
+  },
+
+  async getDownloadsByCategory() {
+    return await request('/Analytics/materials/downloads-by-category');
+  },
+
+  async getTrainingSummary() {
+    return await request('/Analytics/trainings/registration-summary');
+  },
+
+  async getFeedbackRatings() {
+    return await request('/Analytics/feedback/ratings');
   },
 
   /**

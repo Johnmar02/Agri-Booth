@@ -83,6 +83,32 @@ export const useVisitorStore = defineStore('visitor', {
     },
 
     /**
+     * Updates the visitor profile data.
+     * @param {Object} data - The updated profile data.
+     */
+    async updateProfile(data) {
+      this.loading = true;
+      this.error = null;
+      try {
+        const result = await apiClient.updateProfile(data);
+        
+        if (result.ok) {
+          this.visitorProfile = { ...this.visitorProfile, ...result.data };
+          this.registration.name = result.data.fullName || this.registration.name;
+          return result;
+        } else {
+          throw new Error(result.data?.message || result.message || 'Update failed');
+        }
+      } catch (err) {
+        this.error = err.message;
+        console.error('Failed to update visitor profile:', err);
+        throw err;
+      } finally {
+        this.loading = false;
+      }
+    },
+
+    /**
      * Logs out the visitor and clears local state.
      */
     async logoutVisitor() {

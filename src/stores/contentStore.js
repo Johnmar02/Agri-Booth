@@ -54,10 +54,11 @@ export const useContentStore = defineStore('content', {
         const results = await Promise.allSettled([
           apiClient.getIECMaterials(),
           apiClient.getTrainingPrograms(),
+          apiClient.getCourses(),
           this.fetchBebuQuestions()
         ]);
 
-        const [materialsRes, programsRes] = results;
+        const [materialsRes, programsRes, coursesRes] = results;
 
         if (materialsRes.status === 'fulfilled' && materialsRes.value.ok) {
           const iecModule = this.modules.find(m => m.id === 'iec-materials');
@@ -70,6 +71,13 @@ export const useContentStore = defineStore('content', {
           const trainingModule = this.modules.find(m => m.id === 'training-programs');
           if (trainingModule) {
             trainingModule.programs = programsRes.value.data || [];
+          }
+        }
+
+        if (coursesRes.status === 'fulfilled' && coursesRes.value.ok) {
+          const lmsModule = this.modules.find(m => m.id === 'e-learning');
+          if (lmsModule) {
+            lmsModule.courses = coursesRes.value.data || [];
           }
         }
 
@@ -184,10 +192,13 @@ export const useContentStore = defineStore('content', {
 
       if (moduleId === 'bebu-game') {
         module.questions = (module.questions || []).filter((question) => question.id !== resourceId);
-        return;
+      } else if (moduleId === 'iec-materials') {
+        module.materials = (module.materials || []).filter((mat) => mat.id !== resourceId);
+      } else if (moduleId === 'training-programs') {
+        module.programs = (module.programs || []).filter((prog) => prog.id !== resourceId);
+      } else {
+        module.resources = (module.resources || []).filter((resource) => resource.id !== resourceId);
       }
-
-      module.resources = (module.resources || []).filter((resource) => resource.id !== resourceId);
     },
 
     recordVisitorSubmission(payload) {

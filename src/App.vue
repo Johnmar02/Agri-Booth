@@ -29,6 +29,15 @@ onMounted(() => {
     });
   });
 
+  signalrService.on("NewFeedback", (feedback) => {
+    contentStore.addNotification({
+      type: "feedback",
+      title: "New Feedback Received",
+      message: `${feedback.visitorName} rated ${feedback.rating} stars: "${feedback.message.substring(0, 40)}..."`,
+      feedback: feedback
+    });
+  });
+
   signalrService.startConnection().catch(err => {
     console.warn("Initial SignalR connection failed (expected if not logged in):", err);
   });

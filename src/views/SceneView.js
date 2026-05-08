@@ -1,10 +1,15 @@
 import * as THREE from 'three';
 import { OrbitControls } from 'three/examples/jsm/controls/OrbitControls.js';
 import { GLTFLoader } from 'three/examples/jsm/loaders/GLTFLoader.js';
+import { getHotspotLayout, GLB_MODEL_PATH } from '@/models/boothModel';
 
 export class SceneView {
-  constructor(canvasContainer) {
+  constructor(canvasContainer, options = {}) {
     this.container = canvasContainer;
+    this.onHotspotClick = options.onHotspotClick || (() => {});
+    this.onBackgroundClick = options.onBackgroundClick || (() => {});
+    this.onHoverChange = options.onHoverChange || (() => {});
+    this.onProgress = options.onProgress || (() => {});
 
     this.scene = new THREE.Scene();
     this.scene.background = new THREE.Color(0xd0d0d6);
@@ -31,30 +36,51 @@ export class SceneView {
 
     this.controls = new OrbitControls(this.camera, this.renderer.domElement);
     this.controls.enableDamping = true;
-    this.controls.dampingFactor = 0.05;
+    this.controls.dampingFactor = 0.08; // Slightly faster damping
     this.controls.enablePan = true;
     this.controls.enableZoom = true;
     this.controls.maxPolarAngle = Math.PI / 2 - 0.05;
     this.controls.target.copy(this.defaultLookAt);
-    this.controls.autoRotate = false;
     this.controls.minDistance = 0.5;
     this.controls.maxDistance = 30;
 
     this.isLerpingToTarget = false;
+    this.animationId = null;
+    this.activeFocusId = null; // Track current focus
 
     this.controls.addEventListener('start', () => {
       this.isLerpingToTarget = false;
+      this.activeFocusId = null;
     });
 
     this.interactableObjects = [];
     this.hotspots = [];
+    this.hoveredHotspot = null;
 
-    this.gltfLoader = new GLTFLoader();
+    this.raycaster = new THREE.Raycaster();
+    this.pointer = new THREE.Vector2();
+
+    this.loadingManager = new THREE.LoadingManager(
+      () => this.onProgress(100),
+      (url, itemsLoaded, itemsTotal) => {
+        this.onProgress(Math.round((itemsLoaded / itemsTotal) * 100));
+      }
+    );
+
+    this.gltfLoader = new GLTFLoader(this.loadingManager);
 
     this.setupLighting();
     this.setupEnvironment();
 
-    window.addEventListener('resize', this.onWindowResize.bind(this));
+    this.onWindowResizeBound = this.onWindowResize.bind(this);
+    this.onPointerMoveBound = this.onPointerMove.bind(this);
+    this.onPointerDownBound = this.onPointerDown.bind(this);
+
+    window.addEventListener('resize', this.onWindowResizeBound);
+    window.addEventListener('pointermove', this.onPointerMoveBound);
+    window.addEventListener('pointerdown', this.onPointerDownBound);
+
+    this.animate();
   }
 
   setupLighting() {
@@ -86,38 +112,18 @@ export class SceneView {
 
   createHotspotTexture() {
     const canvas = document.createElement('canvas');
-    canvas.width = 128;
-    canvas.height = 128;
+    canvas.width = 64;
+    canvas.height = 64;
     const ctx = canvas.getContext('2d');
-
-    const gradient = ctx.createRadialGradient(64, 64, 0, 64, 64, 64);
-    gradient.addColorStop(0, 'rgba(255, 255, 255, 1)');
-    gradient.addColorStop(0.2, 'rgba(255, 255, 255, 0.8)');
-    gradient.addColorStop(0.5, 'rgba(255, 255, 255, 0.2)');
-    gradient.addColorStop(1, 'rgba(255, 255, 255, 0)');
-
+    const gradient = ctx.createRadialGradient(32, 32, 0, 32, 32, 32);
+    gradient.addColorStop(0, "rgba(255, 255, 255, 1)");
+    gradient.addColorStop(1, "rgba(255, 255, 255, 0)");
     ctx.fillStyle = gradient;
-    ctx.fillRect(0, 0, 128, 128);
-
-    ctx.beginPath();
-    ctx.arc(64, 64, 16, 0, Math.PI * 2);
-    ctx.fillStyle = 'white';
-    ctx.fill();
-
+    ctx.fillRect(0, 0, 64, 64);
     return new THREE.CanvasTexture(canvas);
   }
 
-  /**
-   * buildHotspots(modelCenter)
-   * Creates interactive white glowing dots placed on key booth items.
-   *
-   * HOW TO ADJUST POSITIONS:
-   *   x (cx offset) → + moves RIGHT,   − moves LEFT
-   *   y (cy offset) → + moves UP,      − moves DOWN
-   *   z (cz offset) → + moves FORWARD, − moves BACK
-   */
   buildHotspots(modelCenter) {
-    const group = new THREE.Group();
     const texture = this.createHotspotTexture();
     const material = new THREE.SpriteMaterial({ map: texture, transparent: true, blending: THREE.AdditiveBlending });
 
@@ -125,39 +131,23 @@ export class SceneView {
     const cy = modelCenter.y;
     const cz = modelCenter.z;
 
-    const addHotspot = (id, x, y, z) => {
-      const sprite = new THREE.Sprite(material.clone());
-      sprite.position.set(x, y, z);
-      sprite.scale.set(0.5, 0.5, 1);
-      sprite.userData = { id };
-      group.add(sprite);
-      this.interactableObjects.push(sprite);
-      this.hotspots.push({ mesh: sprite, baseScale: 0.5 });
-    };
+    const hotspotLayout = getHotspotLayout();
 
-    // Brochure/pamphlet rack — far left
-    addHotspot('dot_brochure_rack', cx - 0.4, cy - 0.3, cz + 1.0);
-
-    // Left display shelf (pig toys, trays, pamphlets)
-    addHotspot('dot_left_shelf', cx - 1.2, cy - 0.4, cz + 1.0);
-
-    // Orange back banner — ITCPH center wall
-    addHotspot('dot_banner', cx + 0.3, cy - 0.3, cz - 1.2);
-
-    // Reception/registration table — front right (click opens form)
-    addHotspot('dot_table', cx + 0.95, cy - 0.4, cz + 0.9);
-    
-
-    // Right wall shelves — books & materials
-    addHotspot('dot_right_shelf', cx + 1.4, cy - 0.2, cz + 0.9);
-
-    // Top header signage
-    addHotspot('dot_top_sign', cx + 1.0, cy + 0.8, cz + 1.8);
-
-    // Chairs / seating area
-    addHotspot('dot_chairs', cx - 1.2, cy + 0.1, cz + 1.0);
-
-    return group;
+    hotspotLayout.forEach((hotspot) => {
+      if (hotspot.coords3D) {
+        const sprite = new THREE.Sprite(material.clone());
+        sprite.position.set(
+          cx + hotspot.coords3D.x,
+          cy + hotspot.coords3D.y,
+          cz + hotspot.coords3D.z
+        );
+        sprite.scale.set(0.5, 0.5, 1);
+        sprite.userData = { id: hotspot.id };
+        this.scene.add(sprite);
+        this.interactableObjects.push(sprite);
+        this.hotspots.push({ mesh: sprite, baseScale: 0.5 });
+      }
+    });
   }
 
   setupEnvironment() {
@@ -173,11 +163,10 @@ export class SceneView {
     this.scene.add(hallFloor);
 
     this.gltfLoader.load(
-      '/models/custom_booth/3DAgri-booth.glb',
+      GLB_MODEL_PATH,
       (gltf) => {
         const object = gltf.scene;
 
-        // Auto-scale to fit the camera viewport
         const box = new THREE.Box3().setFromObject(object);
         const size = box.getSize(new THREE.Vector3());
         if (size.x > 0) {
@@ -185,15 +174,12 @@ export class SceneView {
           object.scale.set(scale, scale, scale);
         }
 
-        // Drop to floor
         const boxScaled = new THREE.Box3().setFromObject(object);
         object.position.y = -boxScaled.min.y + 2.5;
 
-        // Recalculate center after positioning
         const finalBox = new THREE.Box3().setFromObject(object);
         const modelCenter = finalBox.getCenter(new THREE.Vector3());
 
-        // Aim camera at model center
         this.defaultLookAt.copy(modelCenter);
         this.targetLookAt.copy(modelCenter);
         this.controls.target.copy(modelCenter);
@@ -207,9 +193,7 @@ export class SceneView {
         });
 
         this.scene.add(object);
-
-        // Spawn hotspots relative to model center
-        this.scene.add(this.buildHotspots(modelCenter));
+        this.buildHotspots(modelCenter);
       },
       undefined,
       (error) => {
@@ -218,16 +202,68 @@ export class SceneView {
     );
   }
 
-  getInteractableObjects() {
-    return this.interactableObjects;
+  onPointerMove(event) {
+    this.pointer.x = (event.clientX / window.innerWidth) * 2 - 1;
+    this.pointer.y = -(event.clientY / window.innerHeight) * 2 + 1;
+
+    this.raycaster.setFromCamera(this.pointer, this.camera);
+    const intersects = this.raycaster.intersectObjects(this.interactableObjects);
+
+    if (intersects.length > 0) {
+      document.body.style.cursor = "pointer";
+      this.hoveredHotspot = intersects[0].object;
+      this.onHoverChange({
+        id: this.hoveredHotspot.userData.id,
+        clientX: event.clientX,
+        clientY: event.clientY
+      });
+    } else {
+      document.body.style.cursor = "default";
+      this.hoveredHotspot = null;
+      this.onHoverChange(null);
+    }
+  }
+
+  onPointerDown(event) {
+    if (event.target.closest("#overlay-ui")) return;
+
+    this.pointer.x = (event.clientX / window.innerWidth) * 2 - 1;
+    this.pointer.y = -(event.clientY / window.innerHeight) * 2 + 1;
+
+    this.raycaster.setFromCamera(this.pointer, this.camera);
+    const intersects = this.raycaster.intersectObjects(this.interactableObjects);
+
+    if (intersects.length > 0) {
+      const clicked = intersects[0].object;
+      clicked.scale.set(0.7, 0.7, 1);
+      this.onHotspotClick({ id: clicked.userData.id, object: clicked });
+    } else {
+      this.onBackgroundClick();
+    }
   }
 
   focusOnTarget(object) {
+    const targetId = object?.userData?.id || null;
+    
+    // If clicking the already focused hotspot, don't re-calculate to avoid jitter
+    if (targetId && targetId === this.activeFocusId) {
+      this.isLerpingToTarget = true; 
+      return;
+    }
+
     this.isLerpingToTarget = true;
+    this.activeFocusId = targetId;
+
     if (object) {
-      const offset = new THREE.Vector3(0, 0.5, 3.5);
+      // Use defaultCameraPos as reference for consistent zoom direction
+      const direction = new THREE.Vector3()
+        .subVectors(this.defaultCameraPos, object.position)
+        .normalize();
+      
       this.targetLookAt.copy(object.position);
-      this.targetCameraPos.copy(object.position).add(offset);
+      this.targetCameraPos.copy(object.position).add(direction.multiplyScalar(4));
+      
+      if (this.targetCameraPos.y < 1.5) this.targetCameraPos.y = 1.5;
     } else {
       this.targetCameraPos.copy(this.defaultCameraPos);
       this.targetLookAt.copy(this.defaultLookAt);
@@ -240,33 +276,63 @@ export class SceneView {
     this.renderer.setSize(window.innerWidth, window.innerHeight);
   }
 
-  render() {
-    if (this.isLerpingToTarget) {
-      this.camera.position.lerp(this.targetCameraPos, 0.05);
-      this.controls.target.lerp(this.targetLookAt, 0.05);
+  animate() {
+    this.animationId = requestAnimationFrame(this.animate.bind(this));
 
-      if (this.camera.position.distanceTo(this.targetCameraPos) < 0.1) {
+    if (this.isLerpingToTarget) {
+      // Faster lerp (0.07) for a snappier feel
+      this.camera.position.lerp(this.targetCameraPos, 0.07);
+      this.controls.target.lerp(this.targetLookAt, 0.07);
+      
+      if (this.camera.position.distanceTo(this.targetCameraPos) < 0.05) {
         this.isLerpingToTarget = false;
       }
     }
 
     this.controls.update();
 
-    // Pulse hotspot animation
     const time = Date.now() * 0.003;
-    this.hotspots.forEach(hotspot => {
-      const scale = hotspot.baseScale + Math.sin(time) * 0.1;
-      hotspot.mesh.scale.set(scale, scale, 1);
+    this.hotspots.forEach((h) => {
+      const isHovered = this.hoveredHotspot === h.mesh;
+      const hoverScale = isHovered ? 0.25 : 0;
+      const pulse = Math.sin(time) * 0.08;
+      const s = h.baseScale + pulse + hoverScale;
+      h.mesh.scale.set(s, s, 1);
     });
 
     this.renderer.render(this.scene, this.camera);
   }
 
-  getRendererDomElement() {
-    return this.renderer.domElement;
-  }
+  dispose() {
+    cancelAnimationFrame(this.animationId);
+    window.removeEventListener('resize', this.onWindowResizeBound);
+    window.removeEventListener('pointermove', this.onPointerMoveBound);
+    window.removeEventListener('pointerdown', this.onPointerDownBound);
 
-  getCamera() {
-    return this.camera;
+    this.controls?.dispose();
+    
+    if (this.scene) {
+      this.scene.traverse((child) => {
+        if (child.isMesh || child.isSprite) {
+          child.geometry?.dispose();
+          if (child.material) {
+            const materials = Array.isArray(child.material) ? child.material : [child.material];
+            materials.forEach((m) => {
+              Object.values(m).forEach((v) => {
+                if (v?.isTexture) v.dispose();
+              });
+              m.dispose?.();
+            });
+          }
+        }
+      });
+    }
+
+    this.renderer?.dispose();
+    if (this.renderer?.domElement?.parentNode) {
+      this.renderer.domElement.parentNode.removeChild(this.renderer.domElement);
+    }
+    document.body.style.cursor = "default";
   }
 }
+
