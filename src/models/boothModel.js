@@ -46,8 +46,14 @@
  * @property {string} shortLabel
  * @property {number} x
  * @property {number} y
+ * @property {{ x: number, y: number, z: number }} [coords3D]
  * @property {string} zone
  */
+
+/**
+ * MODEL: Global asset paths
+ */
+export const GLB_MODEL_PATH = '/models/custom_booth/3DAgri-booth.glb';
 
 /**
  * Returns a deep copy of frozen mock data so controllers can safely derive local state
@@ -107,6 +113,7 @@ const HOTSPOTS = Object.freeze([
     shortLabel: 'VT',
     x: 52,
     y: 24,
+    coords3D: { x: 0.3, y: -0.3, z: -1.2 },
     zone: 'Entry map',
   },
   {
@@ -116,6 +123,7 @@ const HOTSPOTS = Object.freeze([
     shortLabel: 'IEC',
     x: 34,
     y: 36,
+    coords3D: { x: -0.4, y: -0.3, z: 1.0 },
     zone: 'Resource wall',
   },
   {
@@ -125,6 +133,7 @@ const HOTSPOTS = Object.freeze([
     shortLabel: 'SS',
     x: 18,
     y: 56,
+    coords3D: { x: -0.5, y: 0.1, z: 0.9 },
     zone: 'Center backdrop',
   },
   {
@@ -134,6 +143,7 @@ const HOTSPOTS = Object.freeze([
     shortLabel: 'NL',
     x: 72,
     y: 34,
+    coords3D: { x: -1.2, y: -0.4, z: 1.0 },
     zone: 'Publication stack',
   },
   {
@@ -143,6 +153,7 @@ const HOTSPOTS = Object.freeze([
     shortLabel: 'AI',
     x: 80,
     y: 56,
+    coords3D: { x: 0.95, y: -0.4, z: 0.9 },
     zone: 'Advisory desk',
   },
   {
@@ -152,6 +163,7 @@ const HOTSPOTS = Object.freeze([
     shortLabel: 'LMS',
     x: 62,
     y: 72,
+    coords3D: { x: 1.0, y: 0.8, z: 1.8 },
     zone: 'Training kiosk',
   },
   {
@@ -161,6 +173,7 @@ const HOTSPOTS = Object.freeze([
     shortLabel: 'BG',
     x: 40,
     y: 74,
+    coords3D: { x: -1.2, y: 0.1, z: 1.0 },
     zone: 'Trivia corner',
   },
   {
@@ -170,6 +183,7 @@ const HOTSPOTS = Object.freeze([
     shortLabel: 'DC',
     x: 24,
     y: 76,
+    coords3D: { x: 1.4, y: -0.2, z: 0.9 },
     zone: 'Decision tools',
   },
   {
@@ -179,6 +193,7 @@ const HOTSPOTS = Object.freeze([
     shortLabel: 'TP',
     x: 38,
     y: 72,
+    coords3D: { x: 0.95, y: -0.7, z: 1.5 },
     zone: 'Training registration',
   },
   {
@@ -188,6 +203,7 @@ const HOTSPOTS = Object.freeze([
     shortLabel: 'CM',
     x: 20,
     y: 64,
+    coords3D: { x: -1.0, y: 0.8, z: 1.8 },
     zone: 'Corporate publications',
   },
 ]);
@@ -443,36 +459,21 @@ Moreover, Gil advocates the importance of continuous learning. Farmers must dedi
     hotspotId: 'hotspot-elearning',
     title: 'E-Learning',
     access: 'gated',
-    badge: 'Portal placeholder',
-    summary: 'A launch point for LMS and digital learning integrations.',
-    description:
-      'The portal is designed for a frontend-only build so the interface can be validated independently.',
+    badge: 'Educational Hub',
+    summary: 'Manage structured E-Learning courses, modules, and certification paths.',
+    description: 'The ITCPH Learning Management System allows for structured swine husbandry education with integrated progress tracking and automated certification.',
     highlights: [
-      'Purely frontend implementation to ensure architectural decoupling.',
-      'Demonstrates LMS navigation and portal structure in a controlled environment.',
-      'Protects the frontend from external dependencies during validation.',
+      'Structured curriculum with Courses, Modules, and Lessons.',
+      'Integrated knowledge checks (Quizzes) for each module.',
+      'Automated certification upon 100% completion.',
     ],
     quickStats: [
-      { label: 'Status', value: 'Frontend mock' },
-      { label: 'Auth', value: 'Deferred' },
-      { label: 'Purpose', value: 'Learning gateway' },
+      { label: 'Mode', value: 'Integrated LMS' },
+      { label: 'Auth', value: 'Visitor required' },
+      { label: 'Certificates', value: 'Automated' },
     ],
-    resources: [
-      {
-        id: 'res-lms-orientation',
-        title: 'LMS Orientation Tile',
-        format: 'Portal mock',
-        description: 'Placeholder card for orientation videos, schedules, and course walkthroughs.',
-        status: 'Ready for tracking',
-      },
-      {
-        id: 'res-course-catalog',
-        title: 'Course Catalog Tile',
-        format: 'Portal mock',
-        description: 'Placeholder card for pig husbandry lessons, quizzes, and certificate pathways.',
-        status: 'Ready for tracking',
-      },
-    ],
+    courses: [],
+    resources: [],
     stories: [],
     prompts: [],
     placeholder: null,

@@ -401,6 +401,43 @@ export function useBoothController() {
     results: getCalculatorResults(calculatorInputs),
   }));
 
+  const feedbackDraft = reactive({
+    message: '',
+    rating: 5,
+    isSubmitting: false,
+    success: false,
+    error: '',
+  });
+
+  const submitFeedback = async () => {
+    if (!visitorSession.visitorId) return;
+    if (!feedbackDraft.message.trim()) {
+      feedbackDraft.error = 'Please enter a message.';
+      return;
+    }
+
+    feedbackDraft.isSubmitting = true;
+    feedbackDraft.error = '';
+    feedbackDraft.success = false;
+
+    const payload = {
+      VisitorId: visitorSession.visitorId,
+      Message: feedbackDraft.message,
+      Rating: feedbackDraft.rating
+    };
+
+    const result = await apiClient.submitFeedback(payload);
+    feedbackDraft.isSubmitting = false;
+
+    if (result.ok) {
+      feedbackDraft.success = true;
+      feedbackDraft.message = '';
+      feedbackDraft.rating = 5;
+    } else {
+      feedbackDraft.error = result.data?.message || 'Failed to submit feedback.';
+    }
+  };
+
   /**
    * Opens a module when access policy allows it or redirects the visitor into the logbook
    * when the requested module is gated.
@@ -701,6 +738,33 @@ export function useBoothController() {
     calculatorInputs[payload.field] = numericValue;
   };
 
+  /**
+   * Registers the current visitor for a training program.
+   * @param {number} programId
+   */
+  const registerForTraining = async (programId) => {
+    if (!visitorSession.isRegistered) {
+      openLogbook('training-programs');
+      return;
+    }
+
+    try {
+      const result = await apiClient.registerForTraining({
+        VisitorId: visitorSession.visitorId,
+        TrainingProgramId: programId
+      });
+
+      if (result.ok) {
+        alert(result.data.message || 'Successfully registered for the training program!');
+      } else {
+        alert(result.data.message || 'Failed to register for training.');
+      }
+    } catch (error) {
+      console.error('Training registration error:', error);
+      alert('An error occurred during registration. Please try again.');
+    }
+  };
+
   return {
     brand: AGRI_BOOTH_BRAND,
     outcomes: outcomeMetrics,
@@ -720,6 +784,7 @@ export function useBoothController() {
     chatState,
     triviaState,
     calculatorState,
+    feedbackDraft,
     selectModule,
     selectHotspot,
     closeActiveModule,
@@ -738,5 +803,7 @@ export function useBoothController() {
     advanceTrivia,
     resetTrivia,
     updateCalculatorInput,
+    registerForTraining,
+    submitFeedback,
   };
 }

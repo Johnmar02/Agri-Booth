@@ -36,11 +36,11 @@ const handle3DClick = ({ id, object }) => {
     return;
   }
 
+  // Always zoom to the clicked object to give visual feedback
+  threeCanvasRef.value?.focusOnTarget(object);
+  
+  // Then handle the logic for opening the module or logbook
   booth.selectHotspot(id);
-
-  if (booth.activeModule.value) {
-    threeCanvasRef.value?.focusOnTarget(object);
-  }
 };
 
 const handle3DBackgroundClick = () => {
@@ -100,7 +100,8 @@ const handleLogout = () => {
         :chat-state="booth.chatState.value"
         :trivia-state="booth.triviaState.value"
         :calculator-state="booth.calculatorState.value"
-        @close="closePanel"
+        :feedback-draft="booth.feedbackDraft"
+        @close="booth.closeActiveModule"
         @resource-track="booth.trackResource"
         @chat-draft-change="booth.updateChatDraft"
         @chat-submit="booth.submitChatMessage"
@@ -108,7 +109,10 @@ const handleLogout = () => {
         @trivia-next="booth.advanceTrivia"
         @trivia-reset="booth.resetTrivia"
         @calculator-change="booth.updateCalculatorInput"
-      />
+        @training-register="booth.registerForTraining"
+        @feedback-submit="booth.submitFeedback"
+        />
+
     </div>
 
     <Transition name="fade-fast">
