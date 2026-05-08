@@ -5,6 +5,7 @@ import {
   createEmptyLogbookForm,
 } from '@/models/logbookModel';
 import { apiClient } from '@/services/apiClient';
+import { useVisitorStore } from '@/stores/visitor';
 
 /**
  * CONTROLLER: useLogbookController
@@ -122,6 +123,7 @@ export function useLogbookController(options = {}) {
         form[field] = normalizeEmail(rawValue);
         break;
       case 'password':
+      case 'currentPassword':
         // Passwords should not be normalized/trimmed in a way that breaks them,
         // but we still strip angle brackets for basic safety.
         form[field] = String(rawValue ?? '').replace(/[<>]/g, '').slice(0, 60);
@@ -164,9 +166,10 @@ export function useLogbookController(options = {}) {
    * frontend has captured a meaningful visitor profile.
    *
    * @param {boolean} isLogin - Whether to validate for login or registration.
+   * @param {boolean} isProfile - Whether to validate for profile update.
    * @returns {boolean}
    */
-  const validateForm = (isLogin = false) => {
+  const validateForm = (isLogin = false, isProfile = false) => {
     resetErrors();
 
     let isValid = true;
@@ -177,9 +180,23 @@ export function useLogbookController(options = {}) {
       isValid = false;
     }
 
-    if (form.password.length < 6) {
-      errors.password = 'Password must be at least 6 characters long.';
-      isValid = false;
+    // Password is required for login and registration
+    if (!isProfile) {
+      if (form.password.length < 6) {
+        errors.password = 'Password must be at least 6 characters long.';
+        isValid = false;
+      }
+    } else {
+      // In profile mode, password (new password) is optional, but if provided, it must be valid
+      if (form.password.length > 0 && form.password.length < 6) {
+        errors.password = 'New password must be at least 6 characters long.';
+        isValid = false;
+      }
+      // If changing password, current password is required
+      if (form.password.length > 0 && !form.currentPassword) {
+        errors.currentPassword = 'Current password is required to set a new password.';
+        isValid = false;
+      }
     }
 
     if (isLogin) {
@@ -205,7 +222,7 @@ export function useLogbookController(options = {}) {
     }
 
     if (!isValid) {
-      errors.form = 'Review the highlighted fields before unlocking restricted booth modules.';
+      errors.form = isProfile ? 'Review the highlighted fields before saving your profile.' : 'Review the highlighted fields before unlocking restricted booth modules.';
     }
 
     return isValid;
@@ -330,7 +347,8 @@ export function useLogbookController(options = {}) {
       affiliations: data.affiliations || '',
       gender: data.gender || '',
       clientType: data.clientType || '',
-      password: '' // Keep password empty initially
+      password: '', // Keep password empty initially
+      currentPassword: ''
     });
     resetErrors();
   };
@@ -343,27 +361,31 @@ export function useLogbookController(options = {}) {
       return { ok: false };
     }
 
-    if (!validateForm(false)) {
+    if (!validateForm(false, true)) {
       return { ok: false };
     }
 
     isSubmitting.value = true;
+    const visitorStore = useVisitorStore();
 
     try {
       const payload = buildSubmissionPayload();
-      const result = await apiClient.updateVisitor(visitorId, payload);
+      const result = await visitorStore.updateProfile(payload);
 
       if (result.ok) {
         return {
           ok: true,
-          payload,
+          payload: {
+            ...payload,
+            name: result.data?.fullName || payload.name
+          },
         };
       }
       
-      errors.form = result.message || 'Update failed. Please try again.';
+      errors.form = result.data?.message || result.message || 'Update failed. Please try again.';
       return { ok: false };
     } catch (err) {
-      errors.form = 'Connection error. Please try again.';
+      errors.form = err.message || 'Connection error. Please try again.';
       return { ok: false };
     } finally {
       isSubmitting.value = false;

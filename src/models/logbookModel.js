@@ -23,7 +23,8 @@
  *   gender: string,
  *   clientType: string,
  *   email: string,
- *   password: string
+ *   password: string,
+ *   currentPassword: string
  * }}
  */
 export function createEmptyLogbookForm() {
@@ -35,6 +36,7 @@ export function createEmptyLogbookForm() {
     clientType: '',
     email: '',
     password: '',
+    currentPassword: '',
   };
 }
 
@@ -53,6 +55,7 @@ export function createEmptyLogbookForm() {
  *   clientType: string,
  *   email: string,
  *   password: string,
+ *   currentPassword: string,
  *   form: string
  * }}
  */
@@ -65,6 +68,7 @@ export function createEmptyLogbookErrors() {
     clientType: '',
     email: '',
     password: '',
+    currentPassword: '',
     form: '',
   };
 }
