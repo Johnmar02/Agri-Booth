@@ -51,9 +51,20 @@ const isFormValid = computed(() => {
   }
   // In profile mode, we might allow password to be empty
   if (props.isProfileMode) {
-    return props.form.name && props.form.email && props.form.address;
+    return props.form.name && 
+           props.form.email && 
+           props.form.address &&
+           props.form.affiliations &&
+           props.form.gender &&
+           props.form.clientType;
   }
-  return props.form.name && props.form.email && props.form.address && props.form.password;
+  return props.form.name && 
+         props.form.email && 
+         props.form.address && 
+         props.form.password &&
+         props.form.affiliations &&
+         props.form.gender &&
+         props.form.clientType;
 });
 
 const handleSubmission = async () => {
@@ -107,7 +118,7 @@ const toggleMode = () => {
           <div class="reg-form">
             <div class="form-grid">
               <div v-if="!isLoginMode" class="form-group" :class="{ 'has-error': errors.name }">
-                <label>Full Name *</label>
+                <label>Full Name</label>
                 <input 
                   :value="form.name" 
                   @input="$emit('update-field', { field: 'name', value: $event.target.value })"
@@ -117,7 +128,7 @@ const toggleMode = () => {
               </div>
               
               <div class="form-group" :class="{ 'has-error': errors.email, 'full-width': isLoginMode }">
-                <label>Email Address *</label>
+                <label>Email Address</label>
                 <input 
                   :value="form.email" 
                   @input="$emit('update-field', { field: 'email', value: $event.target.value })"
@@ -137,7 +148,7 @@ const toggleMode = () => {
               </div>
 
               <div class="form-group" :class="{ 'has-error': errors.password, 'full-width': isLoginMode }">
-                <label>{{ isProfileMode ? 'New Password' : 'Password *' }}</label>
+                <label>{{ isProfileMode ? 'New Password' : 'Password' }}</label>
                 <input 
                   :value="form.password" 
                   @input="$emit('update-field', { field: 'password', value: $event.target.value })"
@@ -148,7 +159,7 @@ const toggleMode = () => {
 
               <template v-if="!isLoginMode">
                 <div class="form-group full-width" :class="{ 'has-error': errors.address }">
-                  <label>Address *</label>
+                  <label>Address</label>
                   <input 
                     :value="form.address" 
                     @input="$emit('update-field', { field: 'address', value: $event.target.value })"
@@ -206,10 +217,9 @@ const toggleMode = () => {
               >
                 {{ isSubmitting 
                     ? (isProfileMode ? 'Updating Profile...' : (isLoginMode ? 'Signing in...' : 'Recording Entry...')) 
-                    : (isProfileMode ? 'Save Changes' : (isLoginMode ? 'Sign In' : 'Submit to ITCPH')) 
-                }}
-              </button>
-
+                    : (isProfileMode ? 'Save' : (isLoginMode ? 'Sign In' : 'Submit to ITCPH'))
+                    }}
+                    </button>
               <button v-if="!isProfileMode" class="toggle-mode-btn" @click="toggleMode">
                 {{ isLoginMode 
                     ? "Don't have an account? Register here" 

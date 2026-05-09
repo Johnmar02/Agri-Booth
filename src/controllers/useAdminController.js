@@ -1,5 +1,6 @@
 import { ref, reactive, computed } from 'vue';
 import { useContentStore } from '@/stores/contentStore';
+import { useUiStore } from '@/stores/uiStore';
 import { apiClient } from '@/services/apiClient';
 
 const ADMIN_TOKEN_KEY = 'itcph_admin_token';
@@ -8,18 +9,50 @@ const ACTIVITY_EVENTS = ['mousemove', 'mousedown', 'keydown', 'touchstart', 'scr
 
 let contentStore;
 const getContentStore = () => {
-  if (!contentStore) {
-    contentStore = useContentStore();
+  try {
+    if (!contentStore) {
+      contentStore = useContentStore();
+    }
+    return contentStore;
+  } catch (e) {
+    return null;
   }
-  return contentStore;
 };
 
-const isAuthenticated = ref(false);
+function readAdminSession() {
+  if (typeof window === 'undefined') return null;
+  const rawSession = window.localStorage.getItem(ADMIN_TOKEN_KEY);
+  if (!rawSession) return null;
+  try {
+    return JSON.parse(rawSession);
+  } catch (error) {
+    return null;
+  }
+}
+
+function writeAdminSession() {
+  if (typeof window === 'undefined') return;
+  window.localStorage.setItem(
+    ADMIN_TOKEN_KEY,
+    JSON.stringify({
+      role: 'admin',
+      exp: Date.now() + SESSION_TIMEOUT_MS
+    })
+  );
+}
+
+function isSessionValid(session) {
+  return session?.role === 'admin' && session.exp && session.exp > Date.now();
+}
+
+const isAuthenticated = ref(typeof window !== 'undefined' && isSessionValid(readAdminSession()));
+
 const loginForm = reactive({
   username: '',
   password: '',
   error: ''
 });
+
 const isAddingResource = ref(false);
 const resourceDraft = reactive({
   title: '',
@@ -35,6 +68,7 @@ const resourceDraft = reactive({
   optionD: '',
   correctOptionId: 'a'
 });
+
 const uploadProgress = ref(0);
 const adminList = ref([]);
 const feedbacksList = ref([]);
@@ -48,32 +82,8 @@ const detailedAnalytics = reactive({
   trainingSummary: [],
   feedbackRatings: { distribution: [], averageRating: 0 }
 });
+
 let autoLogoutTimer = null;
-
-function readAdminSession() {
-  const rawSession = window.localStorage.getItem(ADMIN_TOKEN_KEY);
-  if (!rawSession) return null;
-
-  try {
-    return JSON.parse(rawSession);
-  } catch (error) {
-    return null;
-  }
-}
-
-function writeAdminSession() {
-  window.localStorage.setItem(
-    ADMIN_TOKEN_KEY,
-    JSON.stringify({
-      role: 'admin',
-      exp: Date.now() + SESSION_TIMEOUT_MS
-    })
-  );
-}
-
-function isSessionValid(session) {
-  return session?.role === 'admin' && session.exp && session.exp > Date.now();
-}
 
 function clearAutoLogoutTimer() {
   if (autoLogoutTimer) {
@@ -85,31 +95,47 @@ function clearAutoLogoutTimer() {
 function scheduleAutoLogout() {
   clearAutoLogoutTimer();
   if (!isAuthenticated.value) return;
+  
+  const session = readAdminSession();
+  const remainingTime = session ? session.exp - Date.now() : SESSION_TIMEOUT_MS;
+  
   autoLogoutTimer = window.setTimeout(() => {
-    clearAdminSession();
-  }, SESSION_TIMEOUT_MS);
+    logoutUserOnly();
+  }, Math.max(0, remainingTime));
 }
 
 function refreshAdminSession() {
   if (!isAuthenticated.value) return;
-  const session = readAdminSession();
-  if (!isSessionValid(session)) {
-    clearAdminSession();
-    return;
-  }
-
   writeAdminSession();
   scheduleAutoLogout();
 }
 
+function clearAdminSession() {
+  isAuthenticated.value = false;
+  if (typeof window !== 'undefined') {
+    window.localStorage.removeItem(ADMIN_TOKEN_KEY);
+  }
+  clearAutoLogoutTimer();
+}
+
+function logoutUserOnly() {
+  clearAdminSession();
+  if (typeof window !== 'undefined' && !window.location.pathname.includes('/admin/login')) {
+    window.location.replace('/admin/login');
+  }
+}
+
 async function restoreAdminSession() {
   const session = readAdminSession();
-  if (isSessionValid(session)) {
-    // Verify with backend that the cookie is still valid
+  if (session && isSessionValid(session)) {
+    scheduleAutoLogout();
     const result = await apiClient.isAdminAuthenticated();
     if (result.ok) {
       isAuthenticated.value = true;
+      writeAdminSession();
       scheduleAutoLogout();
+      const store = getContentStore();
+      if (store) store.fetchStats();
     } else {
       clearAdminSession();
     }
@@ -118,17 +144,9 @@ async function restoreAdminSession() {
   }
 }
 
-function clearAdminSession() {
-  isAuthenticated.value = false;
-  window.localStorage.removeItem(ADMIN_TOKEN_KEY);
-  clearAutoLogoutTimer();
-}
-
-// Register global 401 handler
 apiClient.onUnauthorized(() => {
   if (isAuthenticated.value) {
-    console.warn('Session expired or unauthorized. Logging out...');
-    clearAdminSession();
+    logoutUserOnly();
   }
 });
 
@@ -144,59 +162,53 @@ if (typeof window !== 'undefined') {
   });
 }
 
-/**
- * CONTROLLER: useAdminController
- * Manages the administrative session, mock authentication, 
- * and resource management logic.
- */
 export function useAdminController() {
   const login = async () => {
     loginForm.error = '';
     const result = await apiClient.loginAdmin(loginForm.username, loginForm.password);
-    
     if (result.ok) {
       isAuthenticated.value = true;
       writeAdminSession();
       scheduleAutoLogout();
-      // Fetch initial data
-      await fetchStats();
-      await fetchLogs();
+      const store = getContentStore();
+      if (store) await store.fetchStats();
       return true;
     }
-
     loginForm.error = result.data?.message || result.message || 'Invalid username or password.';
+    loginForm.password = '';
     return false;
   };
 
   const logout = async () => {
     try {
-      // Clear cookie on server
-      await apiClient.logoutAdmin?.();
-    } catch (e) {
-      // Continue with local logout
+      await apiClient.logoutAdmin();
+    } catch (e) {}
+    clearAdminSession();
+    if (typeof window !== 'undefined') {
+      window.location.replace('/admin/login');
     }
-    isAuthenticated.value = false;
-    window.localStorage.removeItem(ADMIN_TOKEN_KEY);
-    loginForm.username = '';
-    loginForm.password = '';
-    loginForm.error = '';
-    clearAutoLogoutTimer();
   };
 
   const fetchStats = async () => {
     const store = getContentStore();
-    await store.fetchStats();
+    if (store) await store.fetchStats();
   };
 
   const fetchLogs = async () => {
     const store = getContentStore();
-    await store.fetchVisitors();
+    if (store) await store.fetchVisitors();
   };
 
   const fetchAdmins = async () => {
     const result = await apiClient.getAdmins();
-    if (result.ok) {
-      adminList.value = result.data;
+    if (result.ok && Array.isArray(result.data)) {
+      adminList.value = result.data.map(admin => ({
+        id: admin.id || admin.Id,
+        username: admin.username || admin.Username || 'Unknown',
+        email: admin.email || admin.Email || 'No Email',
+        role: admin.role || admin.Role || 'Admin',
+        createdAt: admin.createdAt || admin.CreatedAt || new Date().toISOString()
+      }));
     }
   };
 
@@ -220,7 +232,6 @@ export function useAdminController() {
       apiClient.getTrainingSummary(),
       apiClient.getFeedbackRatings()
     ]);
-
     if (daily.ok) detailedAnalytics.dailyVisitors = daily.data;
     if (gender.ok) detailedAnalytics.byGender = gender.data;
     if (client.ok) detailedAnalytics.byClientType = client.data;
@@ -241,181 +252,124 @@ export function useAdminController() {
   };
 
   const removeAdmin = async (id) => {
-    if (confirm("Are you sure you want to remove this admin? This action cannot be undone.")) {
-      const result = await apiClient.deleteAdmin(id);
-      if (result.ok) {
-        await fetchAdmins();
-        return true;
-      }
-    }
-    return false;
+    const uiStore = useUiStore();
+    uiStore.showConfirm(
+      "Remove Administrator",
+      "Are you sure you want to remove this admin? This action cannot be undone.",
+      async () => {
+        const result = await apiClient.deleteAdmin(id);
+        if (result.ok) {
+          await fetchAdmins();
+          uiStore.showToast("Administrator removed.");
+        }
+      },
+      null,
+      "Yes, Remove",
+      "No, Keep"
+    );
   };
 
   const startAddResource = () => {
-    resourceDraft.title = '';
-    resourceDraft.description = '';
-    resourceDraft.format = 'PDF Document';
-    resourceDraft.file = null;
-    resourceDraft.imageFile = null;
-    resourceDraft.question = '';
-    resourceDraft.optionA = '';
-    resourceDraft.optionB = '';
-    resourceDraft.optionC = '';
-    resourceDraft.optionD = '';
-    resourceDraft.correctOptionId = 'a';
+    Object.assign(resourceDraft, {
+      title: '', description: '', format: 'PDF Document',
+      file: null, imageFile: null, question: '',
+      optionA: '', optionB: '', optionC: '', optionD: '',
+      correctOptionId: 'a'
+    });
     isAddingResource.value = true;
   };
 
   const commitResource = async (moduleId) => {
+    const uiStore = useUiStore();
     const isBebuQuestion = moduleId === 'bebu-game';
     const isIECMaterial = moduleId === 'iec-materials';
-    
-    const trimmedQuestion = resourceDraft.question.trim();
-    const options = [
-      resourceDraft.optionA.trim(),
-      resourceDraft.optionB.trim(),
-      resourceDraft.optionC.trim(),
-      resourceDraft.optionD.trim()
-    ];
-
-    if (isBebuQuestion && (!trimmedQuestion || options.some((option) => !option))) return;
-    if (!isBebuQuestion && (!resourceDraft.title || !resourceDraft.description)) return;
-    
-    // Simulate upload progress for UI feedback
     uploadProgress.value = 10;
     const interval = setInterval(() => {
-      if (uploadProgress.value < 90) {
-        uploadProgress.value += Math.floor(Math.random() * 15);
-      }
+      if (uploadProgress.value < 90) uploadProgress.value += 10;
     }, 200);
-
     let result;
     if (isBebuQuestion) {
-      const payload = {
-        Question: trimmedQuestion,
-        OptionA: options[0],
-        OptionB: options[1],
-        OptionC: options[2],
-        OptionD: options[3],
+      result = await apiClient.createBebuQuestion({
+        Question: resourceDraft.question,
+        OptionA: resourceDraft.optionA,
+        OptionB: resourceDraft.optionB,
+        OptionC: resourceDraft.optionC,
+        OptionD: resourceDraft.optionD,
         CorrectAnswer: (resourceDraft.correctOptionId || 'a').toUpperCase(),
-        Category: 'General',
-        Difficulty: 'Easy'
-      };
-      result = await apiClient.createBebuQuestion(payload);
+        Category: 'General', Difficulty: 'Easy'
+      });
     } else if (isIECMaterial) {
       const formData = new FormData();
       formData.append('Title', resourceDraft.title);
       formData.append('Description', resourceDraft.description);
-      formData.append('Category', 'General');
-      if (resourceDraft.file) {
-        formData.append('File', resourceDraft.file);
-      }
-      if (resourceDraft.imageFile) {
-        formData.append('Thumbnail', resourceDraft.imageFile);
-      }
+      if (resourceDraft.file) formData.append('File', resourceDraft.file);
+      if (resourceDraft.imageFile) formData.append('Thumbnail', resourceDraft.imageFile);
       result = await apiClient.uploadIECMaterial(formData);
     } else if (moduleId === 'training-programs') {
-      const payload = {
-        Title: resourceDraft.title,
-        Description: resourceDraft.description,
-        StartDate: resourceDraft.startDate,
-        EndDate: resourceDraft.endDate,
-        Venue: resourceDraft.venue,
-        Slots: parseInt(resourceDraft.slots || '0', 10)
-      };
-      result = await apiClient.createTrainingProgram(payload);
+      result = await apiClient.createTrainingProgram({
+        Title: resourceDraft.title, Description: resourceDraft.description,
+        StartDate: resourceDraft.startDate, EndDate: resourceDraft.endDate,
+        Venue: resourceDraft.venue, Slots: parseInt(resourceDraft.slots || '0', 10)
+      });
     } else if (moduleId === 'e-learning') {
-      const payload = {
-        Title: resourceDraft.title,
-        Description: resourceDraft.description,
+      result = await apiClient.createCourse({
+        Title: resourceDraft.title, Description: resourceDraft.description,
         ThumbnailPath: resourceDraft.thumbnailPath || '/images/course-default.jpg',
         Level: resourceDraft.level || 'Beginner',
         DurationMinutes: parseInt(resourceDraft.durationMinutes || '0', 10)
-      };
-      result = await apiClient.createCourse(payload);
+      });
     } else {
-      // Fallback for other modules if any
-      result = apiClient.addResource
-        ? await apiClient.addResource(moduleId, resourceDraft)
-        : { ok: true, data: { id: `resource-${Date.now()}` } };
+      result = { ok: true };
     }
-    
     clearInterval(interval);
     uploadProgress.value = 100;
-
     if (result.ok) {
+      uiStore.showToast('Material saved successfully.');
       const store = getContentStore();
-      const d = result.data;
-      
-      // We might want to re-fetch instead of manually adding to keep state perfectly in sync
-      if (isIECMaterial) {
-        const refreshRes = await apiClient.getIECMaterials();
-        if (refreshRes.ok) {
-          const iecModule = store.modules.find(m => m.id === 'iec-materials');
-          if (iecModule) iecModule.materials = refreshRes.data;
-        }
-      } else if (moduleId === 'training-programs') {
-        const refreshRes = await apiClient.getTrainingPrograms();
-        if (refreshRes.ok) {
-          const trainingModule = store.modules.find(m => m.id === 'training-programs');
-          if (trainingModule) trainingModule.programs = refreshRes.data;
-        }
-      } else if (isBebuQuestion) {
-        await store.fetchBebuQuestions();
-      } else {
-        const savedResource = {
-            ...resourceDraft,
-            id: d.id || d.Id,
-            fileName: resourceDraft.file?.name || 'internal_asset.pdf'
-          };
-        store.addResourceToModule(moduleId, savedResource);
+      if (store) {
+        if (isIECMaterial) await store.initialize();
+        else if (isBebuQuestion) await store.fetchBebuQuestions();
+        else await store.fetchStats();
       }
-      
-      // Delay closing to show 100%
-      setTimeout(() => {
-        isAddingResource.value = false;
-        uploadProgress.value = 0;
-      }, 500);
+      setTimeout(() => { isAddingResource.value = false; uploadProgress.value = 0; }, 500);
+    } else {
+      uiStore.showAlert('Save Failed', result.data?.message || 'Failed to save material.');
     }
   };
 
-  const updateDraft = (updates) => {
-    Object.assign(resourceDraft, updates);
-  };
+  const updateDraft = (updates) => { Object.assign(resourceDraft, updates); };
 
   const deleteResource = async (moduleId, resourceId) => {
-    if (confirm('Are you sure you want to remove this material? visitors will no longer be able to download it.')) {
-      let result;
-      if (moduleId === 'bebu-game') {
-        result = await apiClient.deleteBebuQuestion(resourceId);
-      } else if (moduleId === 'iec-materials') {
-        result = await apiClient.deleteIECMaterial(resourceId);
-      } else if (moduleId === 'training-programs') {
-        result = await apiClient.deleteTrainingProgram(resourceId);
-      } else {
-        result = apiClient.deleteResource
-          ? await apiClient.deleteResource(moduleId, resourceId)
-          : { ok: true };
-      }
-
-      if (result.ok) {
-        const store = getContentStore();
-        store.removeResourceFromModule(moduleId, resourceId);
-      }
-    }
+    const uiStore = useUiStore();
+    uiStore.showConfirm(
+      'Remove Material',
+      'Are you sure you want to remove this material? This action cannot be undone.',
+      async () => {
+        const result = moduleId === 'bebu-game' ? await apiClient.deleteBebuQuestion(resourceId) :
+                       moduleId === 'iec-materials' ? await apiClient.deleteIECMaterial(resourceId) :
+                       moduleId === 'training-programs' ? await apiClient.deleteTrainingProgram(resourceId) :
+                       { ok: true };
+        if (result.ok) {
+          const store = getContentStore();
+          if (store) store.removeResourceFromModule(moduleId, resourceId);
+          uiStore.showToast('Material removed successfully.');
+        } else {
+          uiStore.showAlert('Error', result.data?.message || 'Failed to remove material.');
+        }
+      },
+      null,
+      "Yes, Delete",
+      "No, Cancel"
+    );
   };
 
   const analyticsSummary = computed(() => {
     const store = getContentStore();
-    const interactionEntries = Object.entries(store.stats.hotspotInteractions);
-    const topHotspotId = interactionEntries.length 
-      ? interactionEntries.sort((a, b) => b[1] - a[1])[0][0]
-      : 'None yet';
-
+    if (!store) return {};
     return {
       totalVisitors: store.stats.totalRegistrations,
       totalDownloads: store.stats.totalResourceDownloads,
-      popularModule: topHotspotId.replace('hotspot-', '').replace('-', ' ').toUpperCase(),
+      popularModule: 'N/A',
       recentVisitors: store.stats.recentVisitors,
       monthlyVisitors: store.stats.monthlyVisitors,
       averageRating: store.stats.averageRating,
@@ -424,28 +378,10 @@ export function useAdminController() {
   });
 
   return {
-    isAuthenticated,
-    loginForm,
-    isAddingResource,
-    resourceDraft,
-    analyticsSummary,
-    uploadProgress,
-    adminList,
-    feedbacksList,
-    detailedAnalytics,
-    visitorLogs: computed(() => getContentStore().visitorLogs),
-    login,
-    logout,
-    fetchAdmins,
-    fetchFeedbacks,
-    fetchDetailedAnalytics,
-    createAdmin,
-    removeAdmin,
-    startAddResource,
-    updateDraft,
-    commitResource,
-    deleteResource
+    isAuthenticated, loginForm, isAddingResource, resourceDraft,
+    analyticsSummary, uploadProgress, adminList, feedbacksList, detailedAnalytics,
+    visitorLogs: computed(() => getContentStore()?.visitorLogs || []),
+    login, logout, restoreAdminSession, fetchAdmins, fetchFeedbacks, fetchDetailedAnalytics,
+    createAdmin, removeAdmin, startAddResource, updateDraft, commitResource, deleteResource
   };
 }
-
-restoreAdminSession();

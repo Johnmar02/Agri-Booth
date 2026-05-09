@@ -84,10 +84,11 @@ watch(
       lmsStore.initialize(visitorStore.visitorId);
     }
     showFeedbackForm.value = false;
-  }
+  },
+  { immediate: true }
 );
 
-const apiBaseUrl = import.meta.env.VITE_API_BASE_URL || 'https://localhost:7198/api';
+const apiBaseUrl = import.meta.env.VITE_API_BASE_URL || 'http://10.0.22.187:7137/api';
 </script>
 
 <template>
@@ -111,7 +112,7 @@ const apiBaseUrl = import.meta.env.VITE_API_BASE_URL || 'https://localhost:7198/
           </button>
         </header>
 
-        <div class="experience-body">
+        <div class="experience-body" :class="{ 'no-padding': module.id === 'e-learning' }">
           <template v-if="module.id === 'virtual-tour'">
             <VirtualTourModule :module="module" />
           </template>
@@ -158,6 +159,12 @@ const apiBaseUrl = import.meta.env.VITE_API_BASE_URL || 'https://localhost:7198/
             />
           </template>
 
+          <template v-else-if="module.id === 'e-learning'">
+            <div class="lms-centered-container">
+              <LmsModule :module="module" />
+            </div>
+          </template>
+
           <!-- Fallback Main Layout for standard/generic modules -->
           <div v-else class="main-layout">
             <div class="narrative-stack">
@@ -191,7 +198,7 @@ const apiBaseUrl = import.meta.env.VITE_API_BASE_URL || 'https://localhost:7198/
                 </div>
               </section>
 
-              <section v-if="module.quickStats?.length" class="body-section">
+              <section v-if="module.quickStats?.length && module.id !== 'e-learning'" class="body-section">
                 <h2 class="section-label">Strategic Metrics</h2>
                 <div class="premium-stats">
                   <div v-for="metric in module.quickStats" :key="metric.label" class="premium-stat-card">
@@ -206,8 +213,7 @@ const apiBaseUrl = import.meta.env.VITE_API_BASE_URL || 'https://localhost:7198/
             </div>
 
             <div class="action-stack">
-              <!-- Special case for LMS within the standard layout -->
-              <LmsModule v-if="module.id === 'e-learning'" :module="module" />
+              <!-- Non-LMS generic action content would go here if needed -->
             </div>
           </div>
         </div>
@@ -268,6 +274,17 @@ const apiBaseUrl = import.meta.env.VITE_API_BASE_URL || 'https://localhost:7198/
   transform: rotate(90deg) scale(1.1);
 }
 .experience-body { padding: 2.5rem; overflow-y: auto; }
+.experience-body.no-padding { padding: 0; overflow: hidden; }
+.lms-centered-container { 
+  width: 100%; 
+  height: 100%; 
+  display: flex; 
+  flex-direction: column; 
+  align-items: center; 
+  justify-content: flex-start;
+  overflow-y: auto;
+}
+.lms-full-width { width: 100%; height: 100%; display: flex; flex-direction: column; }
 .main-layout { display: grid; grid-template-columns: 1.2fr 1fr; gap: 3rem; }
 .body-section { margin-bottom: 3rem; }
 .section-label { font-size: 0.8rem; font-weight: 800; text-transform: uppercase; color: #1a6ab4; border-left: 4px solid #d17c24; padding-left: 12px; margin-bottom: 1.5rem; display: block; }

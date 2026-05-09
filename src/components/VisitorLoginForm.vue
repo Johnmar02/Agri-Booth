@@ -6,6 +6,10 @@ const props = defineProps({
     type: Object,
     required: true
   },
+  fieldOptions: {
+    type: Object,
+    default: () => ({})
+  },
   errors: {
     type: Object,
     default: () => ({})
@@ -24,7 +28,13 @@ const isFormValid = computed(() => {
   if (isLoginMode.value) {
     return props.form.email && props.form.password;
   }
-  return props.form.name && props.form.email && props.form.address && props.form.password;
+  return props.form.name && 
+         props.form.email && 
+         props.form.address && 
+         props.form.password &&
+         props.form.gender &&
+         props.form.clientType &&
+         props.form.affiliations;
 });
 
 const handleSubmission = async () => {
@@ -51,7 +61,7 @@ const toggleMode = () => {
 
     <form @submit.prevent="handleSubmission" class="auth-form">
       <div v-if="!isLoginMode" class="form-group" :class="{ 'has-error': errors.name }">
-        <label>Full Name</label>
+        <label>Full Name *</label>
         <input 
           :value="form.name" 
           @input="$emit('update-field', { field: 'name', value: $event.target.value })"
@@ -61,7 +71,7 @@ const toggleMode = () => {
       </div>
       
       <div class="form-group" :class="{ 'has-error': errors.email }">
-        <label>Email Address</label>
+        <label>Email Address *</label>
         <input 
           :value="form.email" 
           @input="$emit('update-field', { field: 'email', value: $event.target.value })"
@@ -71,7 +81,7 @@ const toggleMode = () => {
       </div>
 
       <div class="form-group" :class="{ 'has-error': errors.password }">
-        <label>Password</label>
+        <label>Password *</label>
         <input 
           :value="form.password" 
           @input="$emit('update-field', { field: 'password', value: $event.target.value })"
@@ -82,7 +92,7 @@ const toggleMode = () => {
 
       <template v-if="!isLoginMode">
         <div class="form-group" :class="{ 'has-error': errors.address }">
-          <label>Address</label>
+          <label>Address *</label>
           <input 
             :value="form.address" 
             @input="$emit('update-field', { field: 'address', value: $event.target.value })"
@@ -91,32 +101,41 @@ const toggleMode = () => {
           <span v-if="errors.address" class="error-text">{{ errors.address }}</span>
         </div>
 
+        <div class="form-group" :class="{ 'has-error': errors.affiliations }">
+          <label>Affiliation / Organization *</label>
+          <input 
+            :value="form.affiliations" 
+            @input="$emit('update-field', { field: 'affiliations', value: $event.target.value })"
+            type="text" placeholder="Company, School, or Farm Name" 
+          />
+          <span v-if="errors.affiliations" class="error-text">{{ errors.affiliations }}</span>
+        </div>
+
         <div class="form-grid">
           <div class="form-group" :class="{ 'has-error': errors.gender }">
-            <label>Gender</label>
+            <label>Gender *</label>
             <select 
               :value="form.gender"
               @change="$emit('update-field', { field: 'gender', value: $event.target.value })"
             >
               <option value="">Select...</option>
-              <option>Male</option>
-              <option>Female</option>
-              <option>Non-binary</option>
+              <option v-for="option in props.fieldOptions?.genders || []" :key="option">
+                {{ option }}
+              </option>
             </select>
             <span v-if="errors.gender" class="error-text">{{ errors.gender }}</span>
           </div>
 
           <div class="form-group" :class="{ 'has-error': errors.clientType }">
-            <label>Client Type</label>
+            <label>Client Type *</label>
             <select 
               :value="form.clientType"
               @change="$emit('update-field', { field: 'clientType', value: $event.target.value })"
             >
               <option value="">Select...</option>
-              <option>Farmer</option>
-              <option>Student</option>
-              <option>Researcher</option>
-              <option>Other</option>
+              <option v-for="option in props.fieldOptions?.clientTypes || []" :key="option">
+                {{ option }}
+              </option>
             </select>
             <span v-if="errors.clientType" class="error-text">{{ errors.clientType }}</span>
           </div>

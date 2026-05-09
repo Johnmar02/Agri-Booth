@@ -42,24 +42,26 @@ defineEmits(["trivia-answer", "trivia-next", "trivia-reset"]);
           
           <div v-if="triviaState.leaderboard && triviaState.leaderboard.length" class="leaderboard-v2">
             <h4>Top 10 Leaderboard</h4>
-            <table class="leaderboard-table">
-              <thead>
-                <tr>
-                  <th>Rank</th>
-                  <th>Visitor</th>
-                  <th>Score</th>
-                  <th>Time</th>
-                </tr>
-              </thead>
-              <tbody>
-                <tr v-for="entry in triviaState.leaderboard" :key="entry.rank">
-                  <td>{{ entry.rank }}</td>
-                  <td>{{ entry.visitor }}</td>
-                  <td>{{ entry.score }}/{{ entry.total }} ({{ entry.percentage }}%)</td>
-                  <td>{{ entry.timeTaken }}</td>
-                </tr>
-              </tbody>
-            </table>
+            <div class="leaderboard-scroll">
+              <table class="leaderboard-table">
+                <thead>
+                  <tr>
+                    <th>Rank</th>
+                    <th>Visitor</th>
+                    <th>Score</th>
+                    <th>Time</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  <tr v-for="entry in triviaState.leaderboard" :key="entry.rank">
+                    <td><span class="rank-badge">{{ entry.rank }}</span></td>
+                    <td><strong>{{ entry.visitor }}</strong></td>
+                    <td>{{ entry.score }}/{{ entry.total }}</td>
+                    <td>{{ entry.timeTaken }}</td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
           </div>
 
           <button class="prime-action-btn reset-btn" @click="$emit('trivia-reset')">Begin New Session</button>
@@ -107,10 +109,12 @@ defineEmits(["trivia-answer", "trivia-next", "trivia-reset"]);
           <Transition name="fade-up">
             <div v-if="triviaState.hasAnswered" class="explanation-v2 hud-style">
               <div class="exp-content">
-                <strong>{{ triviaState.question.correctOptionId.toUpperCase() === triviaState.selectedOptionId.toUpperCase() ? '✓ Correct Answer!' : '× Knowledge Check' }}</strong>
+                <strong :class="triviaState.question.correctOptionId.toUpperCase() === triviaState.selectedOptionId.toUpperCase() ? 'text-success' : 'text-warning'">
+                  {{ triviaState.question.correctOptionId.toUpperCase() === triviaState.selectedOptionId.toUpperCase() ? '✓ Correct Answer!' : '× Knowledge Check' }}
+                </strong>
                 <p>{{ triviaState.question.explanation }}</p>
               </div>
-              <button class="prime-action-btn next-v2" @click="$emit('trivia-next')">Next Question ➔</button>
+              <button class="prime-action-btn next-v2" @click="$emit('trivia-next')">Next Question</button>
             </div>
           </Transition>
         </div>
@@ -119,6 +123,12 @@ defineEmits(["trivia-answer", "trivia-next", "trivia-reset"]);
       <div v-else-if="triviaState.isLoading" class="bebu-loading">
         <div class="spinner"></div>
         <p>Initializing your knowledge session...</p>
+      </div>
+
+      <div v-else-if="triviaState.error" class="bebu-loading bebu-error">
+        <span class="error-icon">⚠️</span>
+        <p>{{ triviaState.error }}</p>
+        <button class="prime-action-btn reset-btn" @click="$emit('trivia-reset')">Try Again</button>
       </div>
     </div>
 
@@ -161,87 +171,143 @@ defineEmits(["trivia-answer", "trivia-next", "trivia-reset"]);
 .ms-val { font-size: 1.2rem; font-weight: 800; color: #1a6ab4; }
 
 .premium-trivia-v2 {
-  background: #0a1912;
+  background: #ffffff;
   border-radius: 32px;
   padding: 3rem;
-  color: white;
-  min-height: 500px;
+  color: #1e293b;
+  min-height: 520px;
   display: flex;
   flex-direction: column;
+  border: 1px solid rgba(26, 106, 180, 0.1);
+  box-shadow: 0 20px 40px rgba(0, 0, 0, 0.05);
 }
 .trivia-hud-v2 {
   display: flex;
   justify-content: space-between;
   margin-bottom: 3rem;
+  padding-bottom: 1.5rem;
+  border-bottom: 1.5px solid #f1f5f9;
 }
 .hud-item-v2 {
   display: flex;
   flex-direction: column;
   gap: 0.5rem;
 }
-.hud-label-v2 { font-size: 0.7rem; font-weight: 800; text-transform: uppercase; color: #4ade80; }
-.hud-progress-v2 { width: 200px; height: 6px; background: rgba(255,255,255,0.1); border-radius: 99px; }
-.hud-fill-v2 { height: 100%; background: #4ade80; border-radius: 99px; transition: width 0.3s ease; }
-.hud-val-v2 { font-size: 1.8rem; font-weight: 900; }
+.hud-label-v2 { font-size: 0.75rem; font-weight: 800; text-transform: uppercase; color: #64748b; letter-spacing: 0.05em; }
+.hud-progress-v2 { width: 200px; height: 10px; background: #f1f5f9; border-radius: 99px; overflow: hidden; }
+.hud-fill-v2 { height: 100%; background: linear-gradient(90deg, #10b981, #34d399); border-radius: 99px; transition: width 0.4s cubic-bezier(0.4, 0, 0.2, 1); }
+.hud-sub-label { font-size: 0.8rem; font-weight: 700; color: #1a6ab4; }
+.hud-val-v2 { font-size: 1.8rem; font-weight: 900; color: #1a6ab4; }
+
+.question-container { margin-bottom: 2.5rem; }
+.q-difficulty { font-size: 0.7rem; font-weight: 800; text-transform: uppercase; padding: 4px 10px; border-radius: 6px; margin-bottom: 1rem; display: inline-block; }
+.q-difficulty.easy { background: #dcfce7; color: #166534; }
+.q-difficulty.medium { background: #fef9c3; color: #854d0e; }
+.q-difficulty.hard { background: #fee2e2; color: #991b1b; }
 
 .question-v2 {
-  font-size: 2rem;
+  font-size: 1.75rem;
   font-weight: 800;
-  line-height: 1.3;
-  margin-bottom: 3rem;
+  line-height: 1.4;
+  color: #0f172a;
 }
 .grid-2x2 {
   display: grid;
   grid-template-columns: 1fr 1fr;
-  gap: 1.5rem;
+  gap: 1.2rem;
 }
 .option-btn-v2 {
-  background: rgba(255,255,255,0.05);
-  border: 1px solid rgba(255,255,255,0.1);
-  padding: 1.5rem;
-  border-radius: 20px;
-  color: white;
+  background: #f8fafc;
+  border: 2px solid #f1f5f9;
+  padding: 1.25rem 1.5rem;
+  border-radius: 16px;
+  color: #334155;
   text-align: left;
   display: flex;
   align-items: center;
-  gap: 1.5rem;
+  gap: 1.2rem;
   cursor: pointer;
-  transition: all 0.2s ease;
+  transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
 }
-.option-btn-v2:hover { background: rgba(255,255,255,0.1); }
-.option-btn-v2.is-correct { background: #059669; border-color: #34d399; }
-.option-btn-v2.is-incorrect { background: #dc2626; border-color: #f87171; }
-.opt-prefix-v2 { font-weight: 900; opacity: 0.5; font-size: 1.2rem; }
-.opt-text-v2 { font-weight: 700; font-size: 1.1rem; }
+.option-btn-v2:hover:not(:disabled) { 
+  background: #ffffff;
+  border-color: #1a6ab4;
+  transform: translateY(-2px);
+  box-shadow: 0 10px 20px rgba(26, 106, 180, 0.1);
+}
+.option-btn-v2.is-correct { background: #ecfdf5; border-color: #10b981; color: #065f46; box-shadow: none; }
+.option-btn-v2.is-incorrect { background: #fef2f2; border-color: #ef4444; color: #991b1b; box-shadow: none; }
+.opt-prefix-v2 { font-weight: 900; color: #94a3b8; font-size: 1rem; }
+.option-btn-v2.is-correct .opt-prefix-v2 { color: #10b981; }
+.option-btn-v2.is-incorrect .opt-prefix-v2 { color: #ef4444; }
+.opt-text-v2 { font-weight: 700; font-size: 1.05rem; }
 
 .explanation-v2 {
-  margin-top: 3rem;
-  padding: 2rem;
-  background: rgba(255,255,255,0.05);
-  border-radius: 24px;
+  margin-top: 2.5rem;
+  padding: 1.5rem 2rem;
+  background: #f1f5f9;
+  border-radius: 20px;
   display: flex;
   justify-content: space-between;
   align-items: center;
   gap: 2rem;
+  border: 1px solid #e2e8f0;
 }
 .exp-content { flex: 1; }
-.exp-content strong { color: #4ade80; font-size: 1.2rem; display: block; margin-bottom: 0.5rem; }
+.exp-content strong { font-size: 1.1rem; display: block; margin-bottom: 0.4rem; }
+.text-success { color: #059669; }
+.text-warning { color: #d97706; }
+.exp-content p { font-size: 0.95rem; color: #475569; line-height: 1.5; margin: 0; }
+.next-v2 { padding: 0.8rem 1.5rem; background: #1a6ab4; box-shadow: 0 4px 12px rgba(26, 106, 180, 0.3); }
 
-.bebu-footer-benefits { margin-top: 2rem; }
-.mini-label { font-size: 0.8rem; font-weight: 800; text-transform: uppercase; color: #64748b; margin-bottom: 1rem; }
-.benefits-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); gap: 1rem; }
-.benefit-tag { font-size: 0.9rem; color: #475569; display: flex; align-items: center; gap: 0.5rem; }
-.check { color: #10b981; font-weight: bold; }
+/* End Screen Centering */
+.trivia-end-screen-v2 {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+  padding: 2rem;
+}
+.trophy-v2 { font-size: 5rem; margin-bottom: 1.5rem; filter: drop-shadow(0 10px 15px rgba(0,0,0,0.1)); }
+.trivia-end-screen-v2 h3 { font-size: 2rem; font-weight: 900; color: #1e293b; margin-bottom: 1rem; }
+.score-v2 { font-size: 1.25rem; font-weight: 700; color: #1a6ab4; margin-bottom: 2rem; background: #eef2ff; padding: 0.6rem 1.5rem; border-radius: 99px; }
 
-.bebu-loading { flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 1rem; color: #94a3b8; }
-.spinner { width: 40px; height: 40px; border: 4px solid rgba(255,255,255,0.1); border-top-color: #4ade80; border-radius: 50%; animation: spin 1s infinite linear; }
+.leaderboard-v2 { width: 100%; max-width: 500px; margin: 2rem 0; background: #f8fafc; border-radius: 20px; padding: 2rem; border: 1px solid #e2e8f0; }
+.leaderboard-scroll { max-height: 300px; overflow-y: auto; margin-top: 1rem; padding-right: 0.5rem; }
+.leaderboard-v2 h4 { margin: 0; font-size: 1.1rem; font-weight: 800; color: #1e293b; }
+.leaderboard-table { width: 100%; border-collapse: collapse; margin-top: 1rem; font-size: 0.95rem; }
+.leaderboard-table th { text-align: left; padding: 0.8rem; border-bottom: 2px solid #e2e8f0; color: #64748b; font-weight: 800; text-transform: uppercase; font-size: 0.75rem; }
+.leaderboard-table td { padding: 1rem 0.8rem; border-bottom: 1px solid #f1f5f9; color: #334155; }
+.rank-badge { background: #e2e8f0; color: #475569; padding: 4px 8px; border-radius: 6px; font-weight: 800; font-size: 0.8rem; }
+tr:nth-child(1) .rank-badge { background: #fef3c7; color: #92400e; }
+tr:nth-child(2) .rank-badge { background: #f1f5f9; color: #475569; }
+tr:nth-child(3) .rank-badge { background: #fff7ed; color: #9a3412; }
+
+.reset-btn { margin-top: 2rem; padding: 1rem 2.5rem; font-size: 1.1rem; border-radius: 14px; background: #d17c24; box-shadow: 0 10px 20px rgba(209, 124, 36, 0.2); }
+.reset-btn:hover { background: #b56a1d; transform: translateY(-2px); }
+
+.bebu-loading { flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 1.5rem; color: #64748b; }
+.spinner { width: 50px; height: 50px; border: 5px solid #f1f5f9; border-top-color: #1a6ab4; border-radius: 50%; animation: spin 1s infinite linear; }
+.bebu-error .error-icon { font-size: 4rem; margin-bottom: 1rem; }
+.bebu-error p { color: #ef4444; font-weight: 700; margin-bottom: 2rem; }
+
 @keyframes spin { to { transform: rotate(360deg); } }
 
-.leaderboard-v2 { margin: 2rem 0; background: rgba(255,255,255,0.05); border-radius: 16px; padding: 1.5rem; }
-.leaderboard-table { width: 100%; border-collapse: collapse; margin-top: 1rem; font-size: 0.9rem; }
-.leaderboard-table th { text-align: left; padding: 0.5rem; border-bottom: 1px solid rgba(255,255,255,0.1); color: #94a3b8; }
-.leaderboard-table td { padding: 0.5rem; border-bottom: 1px solid rgba(255,255,255,0.05); }
+.bebu-footer-benefits { margin-top: 2rem; padding-top: 2rem; border-top: 1px solid #e2e8f0; }
+.mini-label { font-size: 0.8rem; font-weight: 800; text-transform: uppercase; color: #64748b; margin-bottom: 1rem; }
+.benefits-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); gap: 1rem; }
+.benefit-tag { font-size: 0.95rem; color: #475569; display: flex; align-items: center; gap: 0.6rem; background: #f8fafc; padding: 0.75rem 1rem; border-radius: 12px; }
+.check { color: #10b981; font-weight: bold; }
 
 .fade-up-enter-active, .fade-up-leave-active { transition: all 0.3s ease; }
 .fade-up-enter-from, .fade-up-leave-to { opacity: 0; transform: translateY(10px); }
+
+@media (max-width: 800px) {
+  .grid-2x2 { grid-template-columns: 1fr; }
+  .premium-trivia-v2 { padding: 2rem; }
+  .question-v2 { font-size: 1.5rem; }
+  .explanation-v2 { flex-direction: column; text-align: center; }
+}
 </style>

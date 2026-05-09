@@ -12,15 +12,20 @@ export default defineConfig({
   server: {
     proxy: {
       '/api': {
-        target: 'https://192.168.1.124:7137',
+        target: 'http://10.0.22.187:7137',
         changeOrigin: true,
         secure: false
       },
       '/hubs': {
-        target: 'https://192.168.1.124:7137',
+        target: 'http://10.0.22.187:7137',
         changeOrigin: true,
         secure: false,
         ws: true // Enable WebSocket proxying
+      },
+      '/uploads': {
+        target: 'http://10.0.22.187:7137',
+        changeOrigin: true,
+        secure: false
       }
     }
   }

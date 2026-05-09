@@ -47,8 +47,8 @@ export const useContentStore = defineStore('content', {
     /**
      * Fetches dynamic content from the .NET backend.
      */
-    async initialize() {
-      if (this.initialized) return;
+    async initialize(force = false) {
+      if (this.initialized && !force) return;
       this.loading = true;
       try {
         const results = await Promise.allSettled([
@@ -141,10 +141,16 @@ export const useContentStore = defineStore('content', {
     },
 
     async fetchBebuQuestions() {
-      const questionsRes = await apiClient.getBebuQuestions();
+      try {
+        const questionsRes = await apiClient.getBebuQuestions();
 
-      if (questionsRes.ok && questionsRes.data) {
-        this.setBebuQuestions(questionsRes.data);
+        if (questionsRes.ok && questionsRes.data) {
+          this.setBebuQuestions(questionsRes.data);
+        } else if (questionsRes.status === 401) {
+          console.warn('Bebu Game: Backend questions restricted. Visitors will use static content.');
+        }
+      } catch (e) {
+        console.error('Failed to fetch Bebu questions');
       }
     },
 

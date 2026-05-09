@@ -4,6 +4,7 @@ import { useRouter, useRoute } from "vue-router";
 import { useAdminController } from "@/controllers/useAdminController";
 import { useContentStore } from "@/stores/contentStore";
 import { signalrService } from "@/services/signalrService";
+import GlobalOverlay from "@/components/GlobalOverlay.vue";
 
 const router = useRouter();
 const route = useRoute();
@@ -12,6 +13,7 @@ const contentStore = useContentStore();
 
 onMounted(() => {
   contentStore.initialize();
+  admin.restoreAdminSession();
   
   // Start SignalR connection for real-time notifications
   signalrService.on("ReceiveNotification", (message) => {
@@ -58,6 +60,7 @@ watch(
 
 <template>
   <router-view />
+  <GlobalOverlay />
 </template>
 
 <style>

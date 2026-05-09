@@ -40,7 +40,7 @@ const props = defineProps({
           target="_blank" 
           class="prime-action-btn footer-redirect-btn-v3"
         >
-          View More Official Stories ➔
+          View More Official Stories
         </a>
       </div>
     </div>

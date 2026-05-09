@@ -50,6 +50,7 @@ const handleDeleteAdmin = async (id) => {
 };
 
 const handleFetchAdmins = async () => {
+  console.log('--- ROUTE VIEW: handleFetchAdmins called ---');
   await admin.fetchAdmins();
 };
 
@@ -59,6 +60,10 @@ const handleFetchDetailedAnalytics = async () => {
 
 const handleFetchFeedbacks = async () => {
   await admin.fetchFeedbacks();
+};
+
+const handleRefreshContent = async () => {
+  await contentStore.initialize(true);
 };
 </script>
 
@@ -85,5 +90,6 @@ const handleFetchFeedbacks = async () => {
     @fetch-admins="handleFetchAdmins"
     @fetch-detailed-analytics="handleFetchDetailedAnalytics"
     @fetch-feedbacks="handleFetchFeedbacks"
+    @refresh-content="handleRefreshContent"
   />
 </template>

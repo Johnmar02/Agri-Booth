@@ -2,6 +2,7 @@ import { defineStore } from 'pinia';
 import { ref, computed } from 'vue';
 import { apiClient } from '@/services/apiClient';
 import { useVisitorStore } from './visitor';
+import { getTriviaDeck } from '@/models/boothModel';
 
 /**
  * UTILS: Maps raw database question objects to the frontend format.
@@ -63,9 +64,30 @@ export const useBebuGameStore = defineStore('bebuGame', () => {
       // Step 1: Use the Admin's API call to get all live questions
       const response = await apiClient.getBebuQuestions();
       
-      if (response.ok && response.data) {
-        let allQuestions = response.data;
+      let allQuestions = [];
 
+      if (response.ok && response.data) {
+        allQuestions = response.data;
+      } else if (response.status === 401 || !response.ok) {
+        console.warn("Bebu Game: Backend unauthorized or unreachable. Falling back to static trivia deck.");
+        // Fallback to static local questions if backend is restricted
+        const staticDeck = getTriviaDeck();
+        questions.value = staticDeck.map(q => ({
+          id: q.id,
+          prompt: q.prompt,
+          category: 'General',
+          difficulty: 'Easy',
+          options: q.options,
+          correctOptionId: q.correctOptionId,
+          explanation: q.explanation
+        }));
+        
+        // Skip the rest of the backend-dependent logic
+        resetGameState();
+        return;
+      }
+
+      if (allQuestions.length > 0) {
         // Step 2: Filter active and Shuffle them locally for variety
         allQuestions = allQuestions
           .filter(q => q.isActive ?? q.IsActive ?? true)
@@ -76,12 +98,7 @@ export const useBebuGameStore = defineStore('bebuGame', () => {
         questions.value = allQuestions.map(mapDatabaseQuestion);
         
         // Step 4: Reset game state
-        currentQuestionIndex.value = 0;
-        score.value = 0;
-        isGameOver.value = false;
-        hasAnswered.value = false;
-        selectedOptionId.value = '';
-        lastResult.value = null;
+        resetGameState();
 
         // Step 5: (Optional) Try to create a session in the background for registered users
         if (visitorStore.visitorId) {
@@ -91,7 +108,7 @@ export const useBebuGameStore = defineStore('bebuGame', () => {
             });
         }
       } else {
-        error.value = "Unable to load questions from database.";
+        error.value = "No trivia questions found.";
       }
     } catch (e) {
       console.error("Bebu Game Load Error:", e);
@@ -101,6 +118,15 @@ export const useBebuGameStore = defineStore('bebuGame', () => {
         isLoading.value = false;
       }, 300);
     }
+  }
+
+  function resetGameState() {
+    currentQuestionIndex.value = 0;
+    score.value = 0;
+    isGameOver.value = false;
+    hasAnswered.value = false;
+    selectedOptionId.value = '';
+    lastResult.value = null;
   }
 
   async function submitAnswer(answerGiven) {

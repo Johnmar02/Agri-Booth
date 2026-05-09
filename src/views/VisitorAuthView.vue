@@ -46,6 +46,7 @@ const openAdminLogin = () => {
         <div class="form-wrapper">
           <VisitorLoginForm
             :form="booth.logbookForm"
+            :field-options="booth.logbookFieldOptions"
             :errors="booth.logbookErrors"
             :is-submitting="booth.isLogbookSubmitting.value"
             @update-field="booth.updateLogbookField"

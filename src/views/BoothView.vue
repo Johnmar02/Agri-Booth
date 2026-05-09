@@ -16,7 +16,7 @@ const handleLogbookSubmit = async () => {
   const nameBeforeSubmit = booth.logbookForm.name;
   await booth.submitLogbook();
 
-  if (booth.visitorStatus.value.isRegistered) {
+  if (booth.visitorSession.isRegistered) {
     contentStore.recordVisitorSubmission({
       name: nameBeforeSubmit,
       affiliations: booth.logbookForm.affiliations,
@@ -46,13 +46,11 @@ const handle3DClick = ({ id, object }) => {
 const handle3DBackgroundClick = () => {
   booth.closeActiveModule();
   booth.closeLogbook();
-  // Camera no longer resets to default - user maintains focus
 };
 
 const closePanel = () => {
   booth.closeActiveModule();
   booth.closeLogbook();
-  // Camera no longer resets to default - user maintains focus
 };
 
 const openAdminLogin = () => {
@@ -85,7 +83,7 @@ const handleLogout = () => {
         :field-options="booth.logbookFieldOptions"
         :errors="booth.logbookErrors"
         :is-submitting="booth.isLogbookSubmitting.value"
-        :is-registered="booth.visitorStatus.value.accessLabel.includes('unlocked') || booth.visitorStatus.value.accessLabel === 'Restricted modules unlocked'"
+        :is-registered="booth.visitorSession?.isRegistered || false"
         :is-profile-mode="booth.isProfileMode.value"
         @update-field="booth.updateLogbookField"
         @submit="handleLogbookSubmit"
@@ -128,6 +126,55 @@ const handleLogout = () => {
     <button class="admin-corner-btn" @click="openAdminLogin">
       Admin Login
     </button>
+
+    <!-- Global Feedback Button (Bottom Left) -->
+    <div v-if="booth.visitorSession.isRegistered" class="feedback-corner-container">
+      <Transition name="fade-up">
+        <div v-if="booth.showGlobalFeedback.value" class="global-feedback-panel">
+          <div class="feedback-header">
+            <h3>Share your feedback</h3>
+            <button class="close-mini" @click="booth.toggleGlobalFeedback()">&times;</button>
+          </div>
+          
+          <div v-if="booth.feedbackDraft.success" class="feedback-success-state">
+            <span class="check-icon">✓</span>
+            <p>Thank you!</p>
+          </div>
+          <div v-else class="feedback-form-content">
+            <div class="stars-row">
+              <button 
+                v-for="i in 5" 
+                :key="i" 
+                class="star-mini" 
+                :class="{ active: booth.feedbackDraft.rating >= i }"
+                @click="booth.feedbackDraft.rating = i"
+              >★</button>
+            </div>
+            <textarea 
+              v-model="booth.feedbackDraft.message" 
+              placeholder="Tell us about your experience..."
+            ></textarea>
+            <button 
+              class="send-feedback-btn" 
+              :disabled="booth.feedbackDraft.isSubmitting || !booth.feedbackDraft.message.trim()"
+              @click="booth.submitFeedback"
+            >
+              {{ booth.feedbackDraft.isSubmitting ? 'Sending...' : 'Send Feedback' }}
+            </button>
+            <p v-if="booth.feedbackDraft.error" class="mini-error">{{ booth.feedbackDraft.error }}</p>
+          </div>
+        </div>
+      </Transition>
+
+      <button 
+        class="feedback-corner-btn" 
+        :class="{ 'is-active': booth.showGlobalFeedback.value }"
+        @click="booth.toggleGlobalFeedback()"
+      >
+        <span class="icon">💬</span>
+        <span class="label">Feedback</span>
+      </button>
+    </div>
   </div>
 </template>
 
@@ -141,6 +188,164 @@ const handleLogout = () => {
 #overlay-ui {
   position: relative;
   z-index: 10;
+}
+
+.feedback-corner-container {
+  position: fixed;
+  left: 1.5rem;
+  bottom: 1.5rem;
+  z-index: 100;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 1rem;
+}
+
+.feedback-corner-btn {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  background: #d17c24; /* Orange */
+  color: white;
+  border: none;
+  padding: 0.8rem 1.5rem;
+  border-radius: 12px;
+  font-weight: 700;
+  font-size: 0.9rem;
+  cursor: pointer;
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  box-shadow: 0 10px 25px rgba(209, 124, 36, 0.25);
+  backdrop-filter: blur(8px);
+}
+
+.feedback-corner-btn:hover {
+  background: #b56a1d;
+  transform: translateY(-2px);
+  box-shadow: 0 15px 30px rgba(209, 124, 36, 0.35);
+}
+
+.feedback-corner-btn.is-active {
+  background: #64748b;
+  box-shadow: none;
+}
+
+.global-feedback-panel {
+  width: 300px;
+  background: white;
+  border-radius: 20px;
+  box-shadow: 0 20px 50px rgba(0, 0, 0, 0.2);
+  border: 1px solid rgba(26, 106, 180, 0.1);
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+}
+
+.feedback-header {
+  padding: 1rem 1.25rem;
+  background: #1a6ab4;
+  color: white;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.feedback-header h3 {
+  margin: 0;
+  font-size: 0.9rem;
+  font-weight: 700;
+}
+
+.close-mini {
+  background: none;
+  border: none;
+  color: white;
+  font-size: 1.5rem;
+  cursor: pointer;
+  opacity: 0.7;
+}
+
+.close-mini:hover { opacity: 1; }
+
+.feedback-form-content {
+  padding: 1.25rem;
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+}
+
+.stars-row {
+  display: flex;
+  gap: 0.4rem;
+  justify-content: center;
+}
+
+.star-mini {
+  background: none;
+  border: none;
+  font-size: 1.5rem;
+  color: #e2e8f0;
+  cursor: pointer;
+}
+
+.star-mini.active { color: #f59e0b; }
+
+.feedback-form-content textarea {
+  width: 100%;
+  height: 80px;
+  border: 1.5px solid #e2e8f0;
+  border-radius: 12px;
+  padding: 0.75rem;
+  font-size: 0.85rem;
+  resize: none;
+  font-family: inherit;
+}
+
+.feedback-form-content textarea:focus {
+  outline: none;
+  border-color: #1a6ab4;
+}
+
+.send-feedback-btn {
+  background: #1a6ab4;
+  color: white;
+  border: none;
+  padding: 0.75rem;
+  border-radius: 10px;
+  font-weight: 700;
+  font-size: 0.85rem;
+  cursor: pointer;
+}
+
+.send-feedback-btn:disabled {
+  background: #cbd5e1;
+}
+
+.feedback-success-state {
+  padding: 2rem;
+  text-align: center;
+}
+
+.check-icon {
+  font-size: 2.5rem;
+  color: #10b981;
+  display: block;
+  margin-bottom: 0.5rem;
+}
+
+.mini-error {
+  color: #ef4444;
+  font-size: 0.75rem;
+  margin: 0;
+  text-align: center;
+}
+
+/* Animations */
+.fade-up-enter-active, .fade-up-leave-active {
+  transition: all 0.3s ease;
+}
+.fade-up-enter-from, .fade-up-leave-to {
+  opacity: 0;
+  transform: translateY(20px);
 }
 
 .booth-watermark {

@@ -5,7 +5,7 @@
  * It uses the 'credentials: include' flag to support cookie-based authentication.
  */
 
-const BASE_URL = import.meta.env.VITE_API_BASE_URL;
+const BASE_URL = import.meta.env.VITE_API_BASE_URL || '/api';
 
 function buildUrl(endpoint) {
   return `${BASE_URL.replace(/\/$/, '')}/${endpoint.replace(/^\//, '')}`;
@@ -100,9 +100,15 @@ export const apiClient = {
    * AuthController: Registers a new admin user (SuperAdmin only).
    */
   async registerAdmin(payload) {
+    const mappedPayload = {
+      Username: payload.username,
+      Password: payload.password,
+      Email: payload.email,
+      Role: payload.role
+    };
     return await request('/Auth/register', {
       method: 'POST',
-      body: JSON.stringify(payload),
+      body: JSON.stringify(mappedPayload),
     });
   },
 
@@ -413,9 +419,14 @@ export const apiClient = {
    * FeedbacksController: Submits user feedback.
    */
   async submitFeedback(payload) {
+    const mappedPayload = {
+      VisitorId: payload.VisitorId || payload.visitorId,
+      Message: payload.Message || payload.message,
+      Rating: payload.Rating || payload.rating
+    };
     return await request('/Feedbacks', {
       method: 'POST',
-      body: JSON.stringify(payload),
+      body: JSON.stringify(mappedPayload),
     });
   },
 

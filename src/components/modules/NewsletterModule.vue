@@ -62,7 +62,7 @@ watch(() => props.module?.id, () => {
         target="_blank"
         class="prime-action-btn footer-redirect-btn-v3"
       >
-        View More Official Newsletters ➔
+        View More Official Newsletters
       </a>
     </div>
   </section>

@@ -261,9 +261,9 @@ export class SceneView {
         .normalize();
       
       this.targetLookAt.copy(object.position);
-      this.targetCameraPos.copy(object.position).add(direction.multiplyScalar(4));
+      this.targetCameraPos.copy(object.position).add(direction.multiplyScalar(2));
       
-      if (this.targetCameraPos.y < 1.5) this.targetCameraPos.y = 1.5;
+      if (this.targetCameraPos.y < 1.0) this.targetCameraPos.y = 1.0;
     } else {
       this.targetCameraPos.copy(this.defaultCameraPos);
       this.targetLookAt.copy(this.defaultLookAt);

@@ -216,7 +216,17 @@ export function useLogbookController(options = {}) {
       isValid = false;
     }
 
-    if (form.affiliations && form.affiliations.length > 0 && form.affiliations.length < 2) {
+    if (!form.gender) {
+      errors.gender = 'Please select your gender.';
+      isValid = false;
+    }
+
+    if (!form.clientType) {
+      errors.clientType = 'Please select your client type.';
+      isValid = false;
+    }
+
+    if (form.affiliations.length < 2) {
       errors.affiliations = 'State the school, agency, farm, or group connected to this visit.';
       isValid = false;
     }
@@ -258,19 +268,30 @@ export function useLogbookController(options = {}) {
 
     try {
       const result = await apiClient.loginVisitor(form.email, form.password);
+      console.log('--- VISITOR LOGIN RESULT ---', result);
 
       if (result.ok && result.data) {
         const d = result.data;
+        // Robust ID extraction
+        const vid = d.visitorId || d.VisitorId || d.id || d.Id;
+        
+        if (!vid) {
+          console.warn('--- WARNING: Login successful but NO Visitor ID found in response! ---');
+        }
+
         return {
           ok: true,
           payload: {
-            name: d.fullName || d.FullName || d.name,
-            email: d.email || d.Email,
+            visitorId: vid,
+            name: d.fullName || d.FullName || d.name || 'Visitor',
+            email: d.email || d.Email || form.email,
           },
         };
       }
       
       errors.form = result.data?.message || result.message || 'Login failed. Please check your credentials.';
+      // Clear password on failure to discourage incorrect saving
+      form.password = '';
       return { ok: false };
     } catch (err) {
       errors.form = 'Connection error. Please try again.';
@@ -305,11 +326,23 @@ export function useLogbookController(options = {}) {
       
       // Route submission through the newly integrated API client
       const result = await apiClient.submitLogbook(payload);
+      console.log('--- VISITOR REGISTER RESULT ---', result);
 
-      if (result.ok) {
+      if (result.ok && result.data) {
+        const d = result.data;
+        // Robust ID extraction
+        const vid = d.visitorId || d.VisitorId || d.id || d.Id;
+
+        if (!vid) {
+          console.warn('--- WARNING: Registration successful but NO Visitor ID found in response! ---');
+        }
+
         return {
           ok: true,
-          payload,
+          payload: {
+            ...payload,
+            visitorId: vid
+          },
         };
       }
       

@@ -30,7 +30,7 @@ const handleLaunchTour = () => {
           class="prime-action-btn launch-btn-v2"
           @click="handleLaunchTour"
         >
-          Enter Virtual Tour ➔
+          Enter Virtual Tour
         </button>
         <p class="launch-note">Note: This will open the tour in a new browser tab for full performance.</p>
       </div>

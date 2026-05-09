@@ -5,6 +5,10 @@
  * Integrated design language from the booth (Blue/Orange).
  */
 import { computed, nextTick, ref, watch } from "vue";
+import { useAdminController } from "@/controllers/useAdminController";
+
+import AdminAnalytics from "@/components/admin/AdminAnalytics.vue";
+import AdminLmsManagement from "@/components/admin/AdminLmsManagement.vue";
 
 const props = defineProps({
   analytics: {
@@ -45,6 +49,8 @@ const props = defineProps({
   },
 });
 
+const adminController = useAdminController();
+
 const emit = defineEmits([
   "logout",
   "close-dashboard",
@@ -57,6 +63,7 @@ const emit = defineEmits([
   "delete-admin",
   "fetch-admins",
   "fetch-detailed-analytics",
+  "refresh-content",
 ]);
 
 const selectedModuleId = ref("");
@@ -127,6 +134,15 @@ watch(
 
 const jumpToSection = (sectionId) => {
   activeSection.value = sectionId;
+  // Trigger immediate fetch based on the new section
+  if (sectionId === "admins") {
+    console.log('--- JUMP: EMITTING fetch-admins ---');
+    emit("fetch-admins");
+  } else if (sectionId === "analytics") {
+    emit("fetch-detailed-analytics");
+  } else if (sectionId === "feedbacks") {
+    emit("fetch-feedbacks");
+  }
 };
 
 const formatTimestamp = (value) => {
@@ -177,7 +193,8 @@ const startAddAdmin = () => {
 
 const commitAdmin = async () => {
   adminError.value = "";
-  const result = await emit("create-admin", adminDraft.value);
+  // Use the controller directly to get the true result (emit doesn't return values)
+  const result = await adminController.createAdmin(adminDraft.value);
   if (result === true) {
     isAddingAdmin.value = false;
   } else {
@@ -186,7 +203,9 @@ const commitAdmin = async () => {
 };
 
 watch(activeSection, (newSection) => {
+  console.log('--- ADMIN DASHBOARD SECTION CHANGE ---', newSection);
   if (newSection === "admins") {
+    console.log('--- EMITTING fetch-admins ---');
     emit("fetch-admins");
   } else if (newSection === "analytics") {
     emit("fetch-detailed-analytics");
@@ -243,7 +262,7 @@ watch(activeSection, (newSection) => {
           </div>
           <div class="header-actions">
             <button class="btn-secondary" @click="$emit('close-dashboard')">
-              Return to Booth
+              Back
             </button>
           </div>
         </header>
@@ -527,454 +546,373 @@ watch(activeSection, (newSection) => {
             </div>
 
             <div class="content-panel">
-              <!-- Inline Add Material Form -->
-              <div v-if="isAddingResource" class="inline-form-container">
-                <div class="panel-header">
-                  <div class="panel-info">
-                    <h3>{{ selectedModule?.id === 'bebu-game' ? 'Create New Trivia Question' : `New Material for ${selectedModule?.title}` }}</h3>
-                    <p>{{ selectedModule?.id === 'bebu-game' ? 'Add a specialized pig husbandry quiz item to the live booth.' : 'Enter the details for the new asset below.' }}</p>
-                  </div>
-                  <button class="btn-text" @click="$emit('cancel-add')">Cancel</button>
-                </div>
+              <!-- LMS Specialized Manager (Course/Module/Lesson hierarchy) -->
+              <AdminLmsManagement 
+                v-if="selectedModule?.id === 'e-learning'"
+                :courses="selectedModule.courses || []"
+                @refresh="$emit('fetch-detailed-analytics')"
+              />
 
-                <form class="upload-form" @submit.prevent="$emit('commit-resource', selectedModuleId)">
-                  <div v-if="selectedModule?.id === 'bebu-game'" class="form-grid">
-                    <div class="field full">
-                      <label>Trivia Question</label>
-                      <textarea
-                        rows="3"
-                        placeholder="e.g. What is the ideal temperature for a newborn piglet?"
-                        :value="resourceDraft.question"
-                        @input="$input => $emit('update-draft', { question: $input.target.value })"
-                        required
-                      ></textarea>
-                    </div>
-
-                    <div class="field">
-                      <label>Option A</label>
-                      <input
-                        type="text"
-                        placeholder="Choice A"
-                        :value="resourceDraft.optionA"
-                        @input="$input => $emit('update-draft', { optionA: $input.target.value })"
-                        required
-                      />
-                    </div>
-
-                    <div class="field">
-                      <label>Option B</label>
-                      <input
-                        type="text"
-                        placeholder="Choice B"
-                        :value="resourceDraft.optionB"
-                        @input="$input => $emit('update-draft', { optionB: $input.target.value })"
-                        required
-                      />
-                    </div>
-
-                    <div class="field">
-                      <label>Option C</label>
-                      <input
-                        type="text"
-                        placeholder="Choice C"
-                        :value="resourceDraft.optionC"
-                        @input="$input => $emit('update-draft', { optionC: $input.target.value })"
-                        required
-                      />
-                    </div>
-
-                    <div class="field">
-                      <label>Option D</label>
-                      <input
-                        type="text"
-                        placeholder="Choice D"
-                        :value="resourceDraft.optionD"
-                        @input="$input => $emit('update-draft', { optionD: $input.target.value })"
-                        required
-                      />
-                    </div>
-
-                    <div class="field">
-                      <label>Correct Answer</label>
-                      <select
-                        :value="resourceDraft.correctOptionId"
-                        @change="$input => $emit('update-draft', { correctOptionId: $input.target.value })"
-                        required
-                      >
-                        <option value="a">Option A</option>
-                        <option value="b">Option B</option>
-                        <option value="c">Option C</option>
-                        <option value="d">Option D</option>
-                      </select>
-                    </div>
-
-                    <div class="field">
-                      <label>Difficulty</label>
-                      <select :value="resourceDraft.difficulty" @change="$input => $emit('update-draft', { difficulty: $input.target.value })">
-                        <option>Easy</option>
-                        <option>Medium</option>
-                        <option>Hard</option>
-                      </select>
-                    </div>
-                  </div>
-
-                  <div v-else-if="selectedModule?.id === 'training-programs'" class="form-grid">
-                    <div class="field full">
-                      <label>Program Title</label>
-                      <input 
-                        type="text" 
-                        placeholder="e.g. Fundamental Swine Husbandry Course"
-                        :value="resourceDraft.title" 
-                        @input="$input => $emit('update-draft', { title: $input.target.value })" 
-                        required 
-                      />
-                    </div>
-                    
-                    <div class="field full">
-                      <label>Description</label>
-                      <textarea 
-                        rows="3" 
-                        placeholder="Brief summary of the training program..."
-                        :value="resourceDraft.description" 
-                        @input="$input => $emit('update-draft', { description: $input.target.value })" 
-                        required
-                      ></textarea>
-                    </div>
-
-                    <div class="field">
-                      <label>Start Date</label>
-                      <input 
-                        type="datetime-local" 
-                        :value="resourceDraft.startDate" 
-                        @input="$input => $emit('update-draft', { startDate: $input.target.value })" 
-                        required 
-                      />
-                    </div>
-
-                    <div class="field">
-                      <label>End Date</label>
-                      <input 
-                        type="datetime-local" 
-                        :value="resourceDraft.endDate" 
-                        @input="$input => $emit('update-draft', { endDate: $input.target.value })" 
-                        required 
-                      />
-                    </div>
-
-                    <div class="field">
-                      <label>Venue</label>
-                      <input 
-                        type="text" 
-                        placeholder="e.g. ITCPH Main Hall"
-                        :value="resourceDraft.venue" 
-                        @input="$input => $emit('update-draft', { venue: $input.target.value })" 
-                        required 
-                      />
-                    </div>
-
-                    <div class="field">
-                      <label>Total Slots</label>
-                      <input 
-                        type="number" 
-                        placeholder="e.g. 30"
-                        :value="resourceDraft.slots" 
-                        @input="$input => $emit('update-draft', { slots: $input.target.value })" 
-                        required 
-                      />
-                    </div>
-                  </div>
-
-                  <div v-else-if="selectedModule?.id === 'e-learning'" class="form-grid">
-                    <div class="field full">
-                      <label>Course Title</label>
-                      <input 
-                        type="text" 
-                        placeholder="e.g. Advanced Swine Nutrition"
-                        :value="resourceDraft.title" 
-                        @input="$input => $emit('update-draft', { title: $input.target.value })" 
-                        required 
-                      />
-                    </div>
-                    
-                    <div class="field full">
-                      <label>Description</label>
-                      <textarea 
-                        rows="3" 
-                        placeholder="Brief summary of the learning objectives..."
-                        :value="resourceDraft.description" 
-                        @input="$input => $emit('update-draft', { description: $input.target.value })" 
-                        required
-                      ></textarea>
-                    </div>
-
-                    <div class="field">
-                      <label>Difficulty Level</label>
-                      <select :value="resourceDraft.level" @change="$input => $emit('update-draft', { level: $input.target.value })">
-                        <option>Beginner</option>
-                        <option>Intermediate</option>
-                        <option>Advanced</option>
-                      </select>
-                    </div>
-
-                    <div class="field">
-                      <label>Estimated Duration (Minutes)</label>
-                      <input 
-                        type="number" 
-                        placeholder="e.g. 120"
-                        :value="resourceDraft.durationMinutes" 
-                        @input="$input => $emit('update-draft', { durationMinutes: $input.target.value })" 
-                        required 
-                      />
-                    </div>
-
-                    <div class="field full">
-                      <label>Thumbnail Path / URL</label>
-                      <input 
-                        type="text" 
-                        placeholder="/images/courses/nutrition.jpg"
-                        :value="resourceDraft.thumbnailPath" 
-                        @input="$input => $emit('update-draft', { thumbnailPath: $input.target.value })" 
-                      />
-                    </div>
-                  </div>
-
-                  <div v-else class="form-grid">
-                    <div class="field full">
-                      <label>Material Title</label>
-                      <input 
-                        type="text" 
-                        placeholder="e.g. Swine Management Guide v2"
-                        :value="resourceDraft.title" 
-                        @input="$input => $emit('update-draft', { title: $input.target.value })" 
-                        required 
-                      />
-                    </div>
-                    
-                    <div class="field full">
-                      <label>Description</label>
-                      <textarea 
-                        rows="3" 
-                        placeholder="Brief summary of the content..."
-                        :value="resourceDraft.description" 
-                        @input="$input => $emit('update-draft', { description: $input.target.value })" 
-                        required
-                      ></textarea>
-                    </div>
-
-                    <div class="field">
-                      <label>Content Type</label>
-                      <select :value="resourceDraft.format" @change="$input => $emit('update-draft', { format: $input.target.value })">
-                        <option>PDF Document</option>
-                        <option>Article / News</option>
-                        <option>IEC Image</option>
-                        <option>Training Video</option>
-                      </select>
-                    </div>
-
-                    <div class="field">
-                      <label>Access Level</label>
-                      <input type="text" :value="selectedModule?.access" disabled class="disabled-input" />
-                    </div>
-
-                    <div class="field full">
-                      <label>Main File (PDF, Video, etc.)</label>
-                      <div class="file-upload-zone">
-                        <input type="file" id="main-file" class="hidden-input" @change="handleFileChange($event, 'file')" />
-                        <label for="main-file" class="file-label">
-                          {{ resourceDraft.file ? resourceDraft.file.name : 'Choose content file...' }}
-                        </label>
-                      </div>
-                    </div>
-
-                    <div class="field full">
-                      <label>Thumbnail / Cover Image (Optional)</label>
-                      <div class="file-upload-zone image">
-                        <input type="file" id="image-file" class="hidden-input" accept="image/*" @change="handleFileChange($event, 'image')" />
-                        <label for="image-file" class="file-label">
-                          {{ resourceDraft.imageFile ? resourceDraft.imageFile.name : 'Choose thumbnail image...' }}
-                        </label>
-                      </div>
-                    </div>
-                  </div>
-
-                  <div v-if="uploadProgress > 0" class="upload-progress">
-                    <div class="progress-bar">
-                      <div class="progress-fill" :style="{ width: uploadProgress + '%' }"></div>
-                    </div>
-                    <span>Uploading: {{ uploadProgress }}%</span>
-                  </div>
-
-                  <div class="form-footer">
-                    <button type="submit" class="btn-primary" :disabled="uploadProgress > 0">
-                      {{ selectedModule?.id === 'bebu-game' ? 'Save Question' : 'Save to Catalog' }}
-                    </button>
-                  </div>
-                </form>
-              </div>
-
-              <!-- Resource List View -->
               <template v-else>
-                <div class="panel-header">
-                  <div class="panel-info">
-                    <h3>{{ selectedModule?.title }}</h3>
-                    <p>{{ selectedModule?.summary }}</p>
-                  </div>
-                  <button class="btn-primary" @click="$emit('start-add')">
-                    {{ selectedModule?.id === 'bebu-game' ? 'Add Question' : 'Add Material' }}
-                  </button>
-                </div>
-
-                <div v-if="isViewingRegistrations" class="registrations-overlay">
+                <!-- Inline Add Material Form (Standard Modules) -->
+                <div v-if="isAddingResource" class="inline-form-container">
                   <div class="panel-header">
                     <div class="panel-info">
-                      <h3>Registrations: {{ activeProgram?.title }}</h3>
-                      <p>List of visitors who registered for this session.</p>
+                      <h3>{{ selectedModule?.id === 'bebu-game' ? 'Create New Trivia Question' : `New Material for ${selectedModule?.title}` }}</h3>
+                      <p>{{ selectedModule?.id === 'bebu-game' ? 'Add a specialized pig husbandry quiz item to the live booth.' : 'Enter the details for the new asset below.' }}</p>
                     </div>
-                    <button class="btn-text" @click="isViewingRegistrations = false">Close</button>
+                    <button class="btn-text" @click="$emit('cancel-add')">Cancel</button>
                   </div>
-                  <div class="registration-table-container">
-                    <table class="log-table mini">
-                      <thead>
-                        <tr>
-                          <th>Visitor</th>
-                          <th>Email</th>
-                          <th>Affiliation</th>
-                          <th>Status</th>
-                          <th>Date</th>
-                        </tr>
-                      </thead>
-                      <tbody>
-                        <tr v-for="reg in trainingRegistrations" :key="reg.id">
-                          <td><strong>{{ reg.visitor.fullName }}</strong></td>
-                          <td>{{ reg.visitor.email }}</td>
-                          <td>{{ reg.visitor.affiliation }}</td>
-                          <td><span class="status-pill">{{ reg.status }}</span></td>
-                          <td>{{ formatTimestamp(reg.registeredAt) }}</td>
-                        </tr>
-                        <tr v-if="trainingRegistrations.length === 0">
-                          <td colspan="5" class="empty-regs">No registrations yet.</td>
-                        </tr>
-                      </tbody>
-                    </table>
-                  </div>
-                </div>
 
-                <div v-else-if="selectedModule?.id === 'bebu-game'" class="trivia-management-list">
-                   <div v-if="allResources.length === 0" class="empty-state">
-                    <p>No questions found.</p>
-                    <span>Create your first trivia item above.</span>
-                  </div>
-                  <div v-for="res in allResources" :key="res.id" class="trivia-record-card">
-                    <div class="trivia-record-header">
-                      <div class="trivia-meta-info">
-                        <span class="difficulty-badge" :class="res.difficulty?.toLowerCase()">{{ res.difficulty }}</span>
-                        <span class="category-tag">{{ res.category }}</span>
+                  <form class="upload-form" @submit.prevent="$emit('commit-resource', selectedModuleId)">
+                    <div v-if="selectedModule?.id === 'bebu-game'" class="form-grid">
+                      <div class="field full">
+                        <label>Trivia Question</label>
+                        <textarea
+                          rows="3"
+                          placeholder="e.g. What is the ideal temperature for a newborn piglet?"
+                          :value="resourceDraft.question"
+                          @input="$input => $emit('update-draft', { question: $input.target.value })"
+                          required
+                        ></textarea>
                       </div>
-                      <button class="record-delete-btn" title="Delete Question" @click="$emit('delete-resource', { moduleId: selectedModule.id, resourceId: res.id })">&times;</button>
-                    </div>
-                    <div class="trivia-record-body">
-                      <h4>{{ res.prompt }}</h4>
-                      <div class="options-preview-grid">
-                        <div v-for="opt in res.options" :key="opt.id" class="option-preview-item" :class="{ 'is-correct-preview': opt.id === res.correctOptionId }">
-                          <span class="opt-id">{{ opt.id.toUpperCase() }}</span>
-                          <span class="opt-val">{{ opt.label }}</span>
-                        </div>
-                      </div>
-                    </div>
-                  </div>
-                </div>
 
-                <div v-else-if="selectedModule?.id === 'training-programs'" class="training-management-grid">
-                   <div v-if="allResources.length === 0" class="empty-state">
-                    <p>No training programs found.</p>
-                    <span>Create your first program above.</span>
-                  </div>
-                  <div v-for="res in allResources" :key="res.id" class="training-admin-card">
-                    <div class="training-admin-header">
-                      <div class="training-admin-info">
-                        <h4>{{ res.title }}</h4>
-                        <span class="venue-badge">📍 {{ res.venue }}</span>
+                      <div class="field">
+                        <label>Option A</label>
+                        <input
+                          type="text"
+                          placeholder="Choice A"
+                          :value="resourceDraft.optionA"
+                          @input="$input => $emit('update-draft', { optionA: $input.target.value })"
+                          required
+                        />
                       </div>
-                      <div class="training-admin-actions">
-                        <button class="btn-text view-regs-btn" @click="viewProgramRegistrations(res)">View Registrations</button>
-                        <button class="record-delete-btn" @click="$emit('delete-resource', { moduleId: selectedModule.id, resourceId: res.id })">&times;</button>
-                      </div>
-                    </div>
-                    <div class="training-admin-body">
-                      <p>{{ res.description }}</p>
-                      <div class="training-admin-stats">
-                        <div class="admin-mini-stat">
-                          <span class="mini-label">Dates</span>
-                          <span class="mini-val">{{ formatTimestamp(res.startDate) }} - {{ formatTimestamp(res.endDate) }}</span>
-                        </div>
-                        <div class="admin-mini-stat">
-                          <span class="mini-label">Slots</span>
-                          <span class="mini-val">{{ res.slots }} Total</span>
-                        </div>
-                      </div>
-                    </div>
-                  </div>
-                </div>
 
-                <div v-else-if="selectedModule?.id === 'e-learning'" class="training-management-grid">
-                   <div v-if="selectedModule.courses?.length === 0" class="empty-state">
-                    <p>No e-learning courses found.</p>
-                    <span>Create your first structured course above.</span>
-                  </div>
-                  <div v-for="course in selectedModule.courses" :key="course.id" class="training-admin-card">
-                    <div class="training-admin-header">
-                      <div class="training-admin-info">
-                        <h4>{{ course.title }}</h4>
-                        <span class="venue-badge">📊 Level: {{ course.level }}</span>
+                      <div class="field">
+                        <label>Option B</label>
+                        <input
+                          type="text"
+                          placeholder="Choice B"
+                          :value="resourceDraft.optionB"
+                          @input="$input => $emit('update-draft', { optionB: $input.target.value })"
+                          required
+                        />
                       </div>
-                      <div class="training-admin-actions">
-                         <span class="status-pill">{{ course.isActive ? 'Active' : 'Inactive' }}</span>
-                        <button class="record-delete-btn" @click="$emit('delete-resource', { moduleId: selectedModule.id, resourceId: course.id })">&times;</button>
-                      </div>
-                    </div>
-                    <div class="training-admin-body">
-                      <p>{{ course.description }}</p>
-                      <div class="training-admin-stats">
-                        <div class="admin-mini-stat">
-                          <span class="mini-label">Structure</span>
-                          <span class="mini-val">{{ course.totalModules }} Modules</span>
-                        </div>
-                        <div class="admin-mini-stat">
-                          <span class="mini-label">Engagement</span>
-                          <span class="mini-val">{{ course.totalEnrollments }} Enrolled</span>
-                        </div>
-                         <div class="admin-mini-stat">
-                          <span class="mini-label">Duration</span>
-                          <span class="mini-val">{{ course.durationMinutes }} Min</span>
-                        </div>
-                      </div>
-                    </div>
-                  </div>
-                </div>
 
-                <div v-else class="resource-grid">
-                  <div v-if="allResources.length === 0" class="empty-state">
-                    <p>No managed materials found.</p>
-                    <span>Click "Add Material" to create your first item.</span>
-                  </div>
-                  
-                  <div
-                    v-for="res in allResources"
-                    :key="res.id"
-                    class="resource-card"
-                  >
-                    <div class="res-type">{{ res.format }}</div>
-                    <div class="res-body">
-                      <h4>{{ res.title }}</h4>
-                      <p>{{ res.description }}</p>
+                      <div class="field">
+                        <label>Option C</label>
+                        <input
+                          type="text"
+                          placeholder="Choice C"
+                          :value="resourceDraft.optionC"
+                          @input="$input => $emit('update-draft', { optionC: $input.target.value })"
+                          required
+                        />
+                      </div>
+
+                      <div class="field">
+                        <label>Option D</label>
+                        <input
+                          type="text"
+                          placeholder="Choice D"
+                          :value="resourceDraft.optionD"
+                          @input="$input => $emit('update-draft', { optionD: $input.target.value })"
+                          required
+                        />
+                      </div>
+
+                      <div class="field">
+                        <label>Correct Answer</label>
+                        <select
+                          :value="resourceDraft.correctOptionId"
+                          @change="$input => $emit('update-draft', { correctOptionId: $input.target.value })"
+                          required
+                        >
+                          <option value="a">Option A</option>
+                          <option value="b">Option B</option>
+                          <option value="c">Option C</option>
+                          <option value="d">Option D</option>
+                        </select>
+                      </div>
+
+                      <div class="field">
+                        <label>Difficulty</label>
+                        <select :value="resourceDraft.difficulty" @change="$input => $emit('update-draft', { difficulty: $input.target.value })">
+                          <option>Easy</option>
+                          <option>Medium</option>
+                          <option>Hard</option>
+                        </select>
+                      </div>
                     </div>
-                    <div class="res-footer">
-                      <button class="btn-danger" @click="$emit('delete-resource', { moduleId: selectedModule.id, resourceId: res.id })">
-                        Remove
+
+                    <div v-else-if="selectedModule?.id === 'training-programs'" class="form-grid">
+                      <div class="field full">
+                        <label>Program Title</label>
+                        <input 
+                          type="text" 
+                          placeholder="e.g. Fundamental Swine Husbandry Course"
+                          :value="resourceDraft.title" 
+                          @input="$input => $emit('update-draft', { title: $input.target.value })" 
+                          required 
+                        />
+                      </div>
+                      
+                      <div class="field full">
+                        <label>Description</label>
+                        <textarea 
+                          rows="3" 
+                          placeholder="Brief summary of the training program..."
+                          :value="resourceDraft.description" 
+                          @input="$input => $emit('update-draft', { description: $input.target.value })" 
+                          required
+                        ></textarea>
+                      </div>
+
+                      <div class="field">
+                        <label>Start Date</label>
+                        <input 
+                          type="datetime-local" 
+                          :value="resourceDraft.startDate" 
+                          @input="$input => $emit('update-draft', { startDate: $input.target.value })" 
+                          required 
+                        />
+                      </div>
+
+                      <div class="field">
+                        <label>End Date</label>
+                        <input 
+                          type="datetime-local" 
+                          :value="resourceDraft.endDate" 
+                          @input="$input => $emit('update-draft', { endDate: $input.target.value })" 
+                          required 
+                        />
+                      </div>
+
+                      <div class="field">
+                        <label>Venue</label>
+                        <input 
+                          type="text" 
+                          placeholder="e.g. ITCPH Main Hall"
+                          :value="resourceDraft.venue" 
+                          @input="$input => $emit('update-draft', { venue: $input.target.value })" 
+                          required 
+                        />
+                      </div>
+
+                      <div class="field">
+                        <label>Total Slots</label>
+                        <input 
+                          type="number" 
+                          placeholder="e.g. 30"
+                          :value="resourceDraft.slots" 
+                          @input="$input => $emit('update-draft', { slots: $input.target.value })" 
+                          required 
+                        />
+                      </div>
+                    </div>
+
+                    <div v-else class="form-grid">
+                      <div class="field full">
+                        <label>Material Title</label>
+                        <input 
+                          type="text" 
+                          placeholder="e.g. Swine Management Guide v2"
+                          :value="resourceDraft.title" 
+                          @input="$input => $emit('update-draft', { title: $input.target.value })" 
+                          required 
+                        />
+                      </div>
+                      
+                      <div class="field full">
+                        <label>Description</label>
+                        <textarea 
+                          rows="3" 
+                          placeholder="Brief summary of the content..."
+                          :value="resourceDraft.description" 
+                          @input="$input => $emit('update-draft', { description: $input.target.value })" 
+                          required
+                        ></textarea>
+                      </div>
+
+                      <div class="field">
+                        <label>Content Type</label>
+                        <select :value="resourceDraft.format" @change="$input => $emit('update-draft', { format: $input.target.value })">
+                          <option>PDF Document</option>
+                          <option>Article / News</option>
+                          <option>IEC Image</option>
+                          <option>Training Video</option>
+                        </select>
+                      </div>
+
+                      <div class="field">
+                        <label>Access Level</label>
+                        <input type="text" :value="selectedModule?.access" disabled class="disabled-input" />
+                      </div>
+
+                      <div class="field full">
+                        <label>Main File (PDF, Video, etc.)</label>
+                        <div class="file-upload-zone">
+                          <input type="file" id="main-file" class="hidden-input" @change="handleFileChange($event, 'file')" />
+                          <label for="main-file" class="file-label">
+                            {{ resourceDraft.file ? resourceDraft.file.name : 'Choose content file...' }}
+                          </label>
+                        </div>
+                      </div>
+
+                      <div class="field full">
+                        <label>Thumbnail / Cover Image (Optional)</label>
+                        <div class="file-upload-zone image">
+                          <input type="file" id="image-file" class="hidden-input" accept="image/*" @change="handleFileChange($event, 'image')" />
+                          <label for="image-file" class="file-label">
+                            {{ resourceDraft.imageFile ? resourceDraft.imageFile.name : 'Choose thumbnail image...' }}
+                          </label>
+                        </div>
+                      </div>
+                    </div>
+
+                    <div v-if="uploadProgress > 0" class="upload-progress">
+                      <div class="progress-bar">
+                        <div class="progress-fill" :style="{ width: uploadProgress + '%' }"></div>
+                      </div>
+                      <span>Uploading: {{ uploadProgress }}%</span>
+                    </div>
+
+                    <div class="form-footer">
+                      <button type="submit" class="btn-primary" :disabled="uploadProgress > 0">
+                        {{ 'Save' }}
                       </button>
                     </div>
-                  </div>
+                  </form>
                 </div>
+
+                <!-- Resource List View -->
+                <template v-else>
+                  <div class="panel-header">
+                    <div class="panel-info">
+                      <h3>{{ selectedModule?.title }}</h3>
+                      <p>{{ selectedModule?.summary }}</p>
+                    </div>
+                    <button class="btn-primary" @click="$emit('start-add')">
+                      {{ selectedModule?.id === 'bebu-game' ? 'Add Question' : 'Add Material' }}
+                    </button>
+                  </div>
+
+                  <div v-if="isViewingRegistrations" class="registrations-overlay">
+                    <div class="panel-header">
+                      <div class="panel-info">
+                        <h3>Registrations: {{ activeProgram?.title }}</h3>
+                        <p>List of visitors who registered for this session.</p>
+                      </div>
+                      <button class="btn-text" @click="isViewingRegistrations = false">Close</button>
+                    </div>
+                    <div class="registration-table-container">
+                      <table class="log-table mini">
+                        <thead>
+                          <tr>
+                            <th>Visitor</th>
+                            <th>Email</th>
+                            <th>Affiliation</th>
+                            <th>Status</th>
+                            <th>Date</th>
+                          </tr>
+                        </thead>
+                        <tbody>
+                          <tr v-for="reg in trainingRegistrations" :key="reg.id">
+                            <td><strong>{{ reg.visitor.fullName }}</strong></td>
+                            <td>{{ reg.visitor.email }}</td>
+                            <td>{{ reg.visitor.affiliation }}</td>
+                            <td><span class="status-pill">{{ reg.status }}</span></td>
+                            <td>{{ formatTimestamp(reg.registeredAt) }}</td>
+                          </tr>
+                          <tr v-if="trainingRegistrations.length === 0">
+                            <td colspan="5" class="empty-regs">No registrations yet.</td>
+                          </tr>
+                        </tbody>
+                      </table>
+                    </div>
+                  </div>
+
+                  <div v-else-if="selectedModule?.id === 'bebu-game'" class="trivia-management-list">
+                    <div v-if="allResources.length === 0" class="empty-state">
+                      <p>No questions found.</p>
+                      <span>Create your first trivia item above.</span>
+                    </div>
+                    <div v-for="res in allResources" :key="res.id" class="trivia-record-card">
+                      <div class="trivia-record-header">
+                        <div class="trivia-meta-info">
+                          <span class="difficulty-badge" :class="res.difficulty?.toLowerCase()">{{ res.difficulty }}</span>
+                          <span class="category-tag">{{ res.category }}</span>
+                        </div>
+                        <button class="record-delete-btn" title="Delete Question" @click="$emit('delete-resource', { moduleId: selectedModule.id, resourceId: res.id })">&times;</button>
+                      </div>
+                      <div class="trivia-record-body">
+                        <h4>{{ res.prompt }}</h4>
+                        <div class="options-preview-grid">
+                          <div v-for="opt in res.options" :key="opt.id" class="option-preview-item" :class="{ 'is-correct-preview': opt.id === res.correctOptionId }">
+                            <span class="opt-id">{{ opt.id.toUpperCase() }}</span>
+                            <span class="opt-val">{{ opt.label }}</span>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+
+                  <div v-else-if="selectedModule?.id === 'training-programs'" class="training-management-grid">
+                    <div v-if="allResources.length === 0" class="empty-state">
+                      <p>No training programs found.</p>
+                      <span>Create your first program above.</span>
+                    </div>
+                    <div v-for="res in allResources" :key="res.id" class="training-admin-card">
+                      <div class="training-admin-header">
+                        <div class="training-admin-info">
+                          <h4>{{ res.title }}</h4>
+                          <span class="venue-badge">📍 {{ res.venue }}</span>
+                        </div>
+                        <div class="training-admin-actions">
+                          <button class="btn-text view-regs-btn" @click="viewProgramRegistrations(res)">View Registrations</button>
+                          <button class="record-delete-btn" @click="$emit('delete-resource', { moduleId: selectedModule.id, resourceId: res.id })">&times;</button>
+                        </div>
+                      </div>
+                      <div class="training-admin-body">
+                        <p>{{ res.description }}</p>
+                        <div class="training-admin-stats">
+                          <div class="admin-mini-stat">
+                            <span class="mini-label">Dates</span>
+                            <span class="mini-val">{{ formatTimestamp(res.startDate) }} - {{ formatTimestamp(res.endDate) }}</span>
+                          </div>
+                          <div class="admin-mini-stat">
+                            <span class="mini-label">Slots</span>
+                            <span class="mini-val">{{ res.slots }} Total</span>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+
+                  <div v-else class="resource-grid">
+                    <div v-if="allResources.length === 0" class="empty-state">
+                      <p>No managed materials found.</p>
+                      <span>Click "Add Material" to create your first item.</span>
+                    </div>
+                    
+                    <div
+                      v-for="res in allResources"
+                      :key="res.id"
+                      class="resource-card"
+                    >
+                      <div class="res-type">{{ res.format }}</div>
+                      <div class="res-body">
+                        <h4>{{ res.title }}</h4>
+                        <p>{{ res.description }}</p>
+                      </div>
+                      <div class="res-footer">
+                        <button class="btn-danger" @click="$emit('delete-resource', { moduleId: selectedModule.id, resourceId: res.id })">
+                          Remove
+                        </button>
+                      </div>
+                    </div>
+                  </div>
+                </template>
               </template>
             </div>
           </div>
@@ -992,8 +930,7 @@ watch(activeSection, (newSection) => {
             </button>
             <button v-else class="btn-text" @click="isAddingAdmin = false">
               Cancel
-            </button>
-          </div>
+            </button>          </div>
 
           <div class="admin-management-content">
             <!-- Add Admin Form -->
@@ -1052,7 +989,7 @@ watch(activeSection, (newSection) => {
                       </td>
                       <td>{{ admin.email }}</td>
                       <td>
-                        <span class="role-pill" :class="admin.role.toLowerCase()">{{ admin.role }}</span>
+                        <span class="role-pill" :class="admin.role?.toLowerCase() || 'admin'">{{ admin.role || 'Admin' }}</span>
                       </td>
                       <td>{{ formatTimestamp(admin.createdAt) }}</td>
                       <td>
@@ -1110,7 +1047,7 @@ watch(activeSection, (newSection) => {
                     </tr>
                   </thead>
                   <tbody>
-                    <tr v-for="log in visitorLogs" :key="log.id || log.submittedAt">
+                    <tr v-for="log in (Array.isArray(visitorLogs) ? visitorLogs : []).filter(l => l)" :key="log.id || log.submittedAt">
                       <td><span class="id-badge">#{{ log.id }}</span></td>
                       <td><strong>{{ log.name }}</strong></td>
                       <td>{{ log.email }}</td>

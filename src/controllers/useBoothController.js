@@ -2,6 +2,8 @@ import { computed, reactive, ref, watch } from 'vue';
 import { useContentStore } from '@/stores/contentStore';
 import { useBebuGameStore } from '@/stores/bebuGame';
 import { useVisitorStore } from '@/stores/visitor';
+import { useUiStore } from '@/stores/uiStore';
+import { apiClient } from '@/services/apiClient';
 import {
   AGRI_BOOTH_BRAND,
   getAdvisoryResponseLibrary,
@@ -195,6 +197,7 @@ export function useBoothController() {
   const activeModuleId = ref(null);
   const isLogbookOpen = ref(false); // Closed on start; pops up when hotspot is clicked without registration
   const isProfileMode = ref(false);
+  const showGlobalFeedback = ref(false);
   const pendingModuleId = ref(null);
 
   const initialTrackedResources = readSessionJson(TRACKED_RESOURCES_SESSION_KEY, []);
@@ -318,7 +321,7 @@ export function useBoothController() {
     hotspotCatalog.map((hotspot) => {
       const module = moduleMap.value.get(hotspot.moduleId);
       // Universal gating: Everything is locked if the user is not registered.
-      const isLocked = !visitorSession.isRegistered;
+      const isLocked = module?.access === 'gated' && !visitorSession.isRegistered;
 
       return {
         ...hotspot,
@@ -335,7 +338,7 @@ export function useBoothController() {
     moduleCatalog.value.map((module) => ({
       ...module,
       // Universal gating: Everything is locked if the user is not registered.
-      isLocked: !visitorSession.isRegistered,
+      isLocked: module.access === 'gated' && !visitorSession.isRegistered,
       isActive: module.id === activeModuleId.value,
     })),
   );
@@ -410,7 +413,13 @@ export function useBoothController() {
   });
 
   const submitFeedback = async () => {
-    if (!visitorSession.visitorId) return;
+    const vid = visitorSession.visitorId || visitorStore.visitorId || 0;
+    console.log('--- FEEDBACK SUBMIT ATTEMPT ---', { 
+      hasLocalId: !!vid, 
+      message: feedbackDraft.message, 
+      rating: feedbackDraft.rating 
+    });
+
     if (!feedbackDraft.message.trim()) {
       feedbackDraft.error = 'Please enter a message.';
       return;
@@ -420,21 +429,30 @@ export function useBoothController() {
     feedbackDraft.error = '';
     feedbackDraft.success = false;
 
+    // We send the ID if we have it, but the backend fix above 
+    // will prioritize the secure Cookie ID if this is 0.
     const payload = {
-      VisitorId: visitorSession.visitorId,
+      VisitorId: vid,
       Message: feedbackDraft.message,
       Rating: feedbackDraft.rating
     };
 
-    const result = await apiClient.submitFeedback(payload);
-    feedbackDraft.isSubmitting = false;
+    try {
+      const result = await apiClient.submitFeedback(payload);
+      console.log('--- FEEDBACK API RESULT ---', result);
+      feedbackDraft.isSubmitting = false;
 
-    if (result.ok) {
-      feedbackDraft.success = true;
-      feedbackDraft.message = '';
-      feedbackDraft.rating = 5;
-    } else {
-      feedbackDraft.error = result.data?.message || 'Failed to submit feedback.';
+      if (result.ok) {
+        feedbackDraft.success = true;
+        feedbackDraft.message = '';
+        feedbackDraft.rating = 5;
+      } else {
+        feedbackDraft.error = result.data?.message || result.message || 'Failed to submit feedback.';
+      }
+    } catch (err) {
+      feedbackDraft.isSubmitting = false;
+      feedbackDraft.error = 'Connection error. Please try again.';
+      console.error('--- FEEDBACK EXCEPTION ---', err);
     }
   };
 
@@ -576,7 +594,7 @@ export function useBoothController() {
 
     visitorSession.isRegistered = true;
     visitorSession.displayName = result.payload.name;
-    visitorSession.visitorId = result.payload.visitorId || result.payload.id;
+    visitorSession.visitorId = result.payload.visitorId;
     visitorSession.profile = result.payload;
 
     // Explicitly sync to visitor store immediately to avoid race conditions
@@ -610,6 +628,8 @@ export function useBoothController() {
         isLogbookOpen.value = false;
         isProfileMode.value = false;
         logbook.resetForm();
+        const uiStore = useUiStore();
+        uiStore.showToast('Your profile has been updated!');
       }
       return;
     }
@@ -622,7 +642,7 @@ export function useBoothController() {
 
     visitorSession.isRegistered = true;
     visitorSession.displayName = result.payload.name;
-    visitorSession.visitorId = result.payload.visitorId || result.payload.id;
+    visitorSession.visitorId = result.payload.visitorId;
     visitorSession.profile = result.payload;
 
     // Explicitly sync to visitor store immediately to avoid race conditions
@@ -748,6 +768,8 @@ export function useBoothController() {
       return;
     }
 
+    const uiStore = useUiStore();
+
     try {
       const result = await apiClient.registerForTraining({
         VisitorId: visitorSession.visitorId,
@@ -755,13 +777,13 @@ export function useBoothController() {
       });
 
       if (result.ok) {
-        alert(result.data.message || 'Successfully registered for the training program!');
+        uiStore.showToast(result.data.message || 'Successfully registered for the training program!');
       } else {
-        alert(result.data.message || 'Failed to register for training.');
+        uiStore.showAlert('Registration Failed', result.data.message || 'Failed to register for training.');
       }
     } catch (error) {
       console.error('Training registration error:', error);
-      alert('An error occurred during registration. Please try again.');
+      uiStore.showAlert('Error', 'An error occurred during registration. Please try again.');
     }
   };
 
@@ -805,5 +827,13 @@ export function useBoothController() {
     updateCalculatorInput,
     registerForTraining,
     submitFeedback,
+    showGlobalFeedback,
+    toggleGlobalFeedback: () => {
+      showGlobalFeedback.value = !showGlobalFeedback.value;
+      if (showGlobalFeedback.value) {
+        feedbackDraft.success = false;
+        feedbackDraft.error = '';
+      }
+    }
   };
 }
