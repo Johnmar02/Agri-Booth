@@ -25,7 +25,9 @@ defineEmits(["chat-draft-change", "chat-submit"]);
           :class="message.role"
         >
           <div class="msg-bubble-v2">
-            <span class="msg-sender-v2">{{ message.role === "user" ? "Visitor" : "ITCPH Expert" }}</span>
+            <span class="msg-sender-v2">{{
+              message.role === "user" ? "Visitor" : "ITCPH Expert"
+            }}</span>
             <p>{{ message.text }}</p>
           </div>
         </div>
@@ -33,11 +35,14 @@ defineEmits(["chat-draft-change", "chat-submit"]);
       <div class="chat-input-zone-v2">
         <div class="chat-input-inner-v2">
           <div class="chat-chips">
-            <button 
-              v-for="p in chatState.prompts" 
-              :key="p" 
+            <button
+              v-for="p in chatState.prompts"
+              :key="p"
               class="prompt-chip"
-              @click="$emit('chat-draft-change', p); $emit('chat-submit')"
+              @click="
+                $emit('chat-draft-change', p);
+                $emit('chat-submit');
+              "
             >
               {{ p }}
             </button>
@@ -54,7 +59,7 @@ defineEmits(["chat-draft-change", "chat-submit"]);
               :disabled="chatState.isBusy"
               @click="$emit('chat-submit')"
             >
-              {{ chatState.isBusy ? '...' : 'Send Query' }}
+              {{ chatState.isBusy ? "..." : "Send" }}
             </button>
           </div>
         </div>
@@ -64,8 +69,19 @@ defineEmits(["chat-draft-change", "chat-submit"]);
 </template>
 
 <style scoped>
-.body-section { margin-bottom: 3rem; }
-.section-label { font-size: 0.8rem; font-weight: 800; text-transform: uppercase; color: #1a6ab4; border-left: 4px solid #d17c24; padding-left: 12px; margin-bottom: 1.5rem; display: block; }
+.body-section {
+  margin-bottom: 3rem;
+}
+.section-label {
+  font-size: 0.8rem;
+  font-weight: 800;
+  text-transform: uppercase;
+  color: #1a6ab4;
+  border-left: 4px solid #d17c24;
+  padding-left: 12px;
+  margin-bottom: 1.5rem;
+  display: block;
+}
 
 /* Chat specialized styles */
 .chat-immersive-layout {

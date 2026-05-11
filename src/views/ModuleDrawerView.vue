@@ -88,7 +88,7 @@ watch(
   { immediate: true }
 );
 
-const apiBaseUrl = import.meta.env.VITE_API_BASE_URL || 'http://10.0.22.187:7137/api';
+const apiBaseUrl = import.meta.env.VITE_API_BASE_URL || 'http://192.168.1.158:7137/api';
 </script>
 
 <template>
